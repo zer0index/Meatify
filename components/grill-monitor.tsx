@@ -6,7 +6,7 @@ import { MeatSensorCard } from "@/components/meat-sensor-card"
 import { MeatSelector } from "@/components/meat-selector"
 import { SessionHeader } from "@/components/session-header"
 import { LiveHighlightsCard } from "@/components/live-highlights-card"
-import { WeatherStatusCard } from "@/components/weather-status-card"
+import { WeatherWidget } from "@/components/weather-widget"
 import { fetchSensorData } from "@/lib/api"
 import type { Sensor, MeatType } from "@/lib/types"
 
@@ -75,7 +75,7 @@ export default function GrillMonitor() {
         {/* Status Cards Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <LiveHighlightsCard sensors={sensors} selectedMeats={selectedMeats} isCelsius={isCelsius} />
-          <WeatherStatusCard isCelsius={isCelsius} onUnitChange={setIsCelsius} />
+          <WeatherWidget />
         </div>
 
         {/* Meat Temperatures Section */}
