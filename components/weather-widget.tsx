@@ -50,7 +50,7 @@ export function WeatherWidget() {
   return (
     <div className="flex flex-col">
       {/* Weather Card Group - visually merge border radius */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl border border-gray-700 overflow-hidden">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl border border-gray-700 overflow-hidden h-[280px]">
         <div className="px-6 py-4">
           {/* Current Weather */}
           <div className="text-xs text-blue-400 mb-2 flex items-center gap-1">
