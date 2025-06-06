@@ -70,17 +70,17 @@ export function MeatSensorCard({
             </div>
 
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold">{meatInfo?.label}</h3>
+              <h3 className="text-lg font-semibold text-amber-500">{meatInfo?.label}</h3>
               <div className="flex items-center">
                 <Thermometer className="h-4 w-4 text-amber-500 mr-1" />
-                <span className="text-sm">Sensor {sensor.id - 1}</span>
+                <span className="text-sm text-white">Sensor {sensor.id - 1}</span>
               </div>
             </div>
 
             <div className="flex justify-between items-center mb-3">
               <div>
-                <div className="text-gray-400 text-xs">Current</div>
-                <div className="text-xl font-bold">{formatTemp(currentTemp, isCelsius)}</div>
+                <div className="text-white text-xs">Current</div>
+                <div className="text-xl font-bold text-white">{formatTemp(currentTemp, isCelsius)}</div>
               </div>
 
               <div>

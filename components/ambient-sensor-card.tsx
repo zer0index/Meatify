@@ -47,7 +47,7 @@ export function AmbientSensorCard({ sensor, isCelsius, onTargetTempChange }: Amb
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Thermometer className="h-6 w-6 text-amber-500" />
-            <h3 className="text-lg font-semibold">Grill Sensor {sensor.id + 1}</h3>
+            <h3 className="font-semibold text-white">Grill Sensor {sensor.id + 1}</h3>
           </div>
           {isOverTemp && (
             <div className="flex items-center text-red-500">
