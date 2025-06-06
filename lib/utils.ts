@@ -34,3 +34,8 @@ export function getMeatInfo(meatType: string | number) {
   };
   return meatTypes[meatType] || { label: String(meatType), image: "" };
 }
+
+export function formatFloat(value: number): string {
+  if (typeof value !== "number" || isNaN(value)) return "--";
+  return value.toFixed(2);
+}

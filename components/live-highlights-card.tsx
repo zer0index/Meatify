@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Flame, Thermometer, AlertTriangle, CheckCircle } from "lucide-react"
 import type { Sensor, MeatType } from "@/lib/types"
-import { formatTemp, getMeatInfo } from "@/lib/utils"
+import { formatTemp, getMeatInfo, formatFloat } from "@/lib/utils"
 
 interface LiveHighlightsCardProps {
   sensors: Sensor[]
@@ -77,7 +77,7 @@ export function LiveHighlightsCard({ sensors, selectedMeats, isCelsius }: LiveHi
               </div>
               <div>
                 <div className="text-sm font-medium text-white">
-                  Avg Grill Temp: {formatTemp(highlights.avgGrillTemp, isCelsius)}
+                  Avg Grill Temp: {formatTemp(Number(formatFloat(highlights.avgGrillTemp)), isCelsius)}
                 </div>
               </div>
             </div>
@@ -96,10 +96,11 @@ export function LiveHighlightsCard({ sensors, selectedMeats, isCelsius }: LiveHi
                   <div>
                     <div className="text-sm font-medium text-white">
                       {getMeatInfo((highlights.closestToTarget as { sensor: Sensor; meatType: MeatType; diff: number }).meatType).label} @{" "}
-                      {formatTemp((highlights.closestToTarget as { sensor: Sensor; meatType: MeatType; diff: number }).sensor.currentTemp, isCelsius)}
+                      {formatTemp(Number(formatFloat((highlights.closestToTarget as { sensor: Sensor; meatType: MeatType; diff: number }).sensor.currentTemp)), isCelsius)}
                     </div>
                     <div className="text-xs text-orange-400">
-                      ({formatTemp((highlights.closestToTarget as { sensor: Sensor; meatType: MeatType; diff: number }).diff, isCelsius)} from target)
+                      ({formatFloat((highlights.closestToTarget as { sensor: Sensor; meatType: MeatType; diff: number }).diff)}
+                      °{isCelsius ? "C" : "F"} from target)
                     </div>
                   </div>
                 </div>
