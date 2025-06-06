@@ -1,4 +1,5 @@
 import type { Sensor } from "./types"
+import { getLatestSensorData } from "@/app/api/data/route"
 
 // Mock data for sensors
 const mockSensors: Sensor[] = [
@@ -82,16 +83,16 @@ function updateSensorTemps(sensors: Sensor[]): Sensor[] {
 
 // Mock API call to fetch sensor data
 export async function fetchSensorData(): Promise<Sensor[]> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  // Update temperatures with random fluctuations
-  const updatedSensors = updateSensorTemps(mockSensors)
-
-  // Update the mock data for next call
+  // Try to get latest data from Node-RED POST endpoint
+  let latestData = getLatestSensorData && getLatestSensorData();
+  if (latestData && Array.isArray(latestData)) {
+    return latestData;
+  }
+  // Fallback to mock data
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const updatedSensors = updateSensorTemps(mockSensors);
   mockSensors.forEach((sensor, index) => {
-    mockSensors[index] = updatedSensors[index]
-  })
-
-  return updatedSensors
+    mockSensors[index] = updatedSensors[index];
+  });
+  return updatedSensors;
 }
