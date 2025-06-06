@@ -70,7 +70,7 @@ export function WeatherWidget() {
           <div className="grid grid-cols-3 gap-3 text-xs">
             <div className="flex items-center gap-1">
               <Wind className="h-3 w-3 text-gray-400" />
-              <span className="text-gray-400">{weather.current.windSpeed} mph</span>
+              <span className="text-gray-400">{weather.current.windSpeed} kmh</span>
             </div>
             <div className="flex items-center gap-1">
               <Droplets className="h-3 w-3 text-gray-400" />
