@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
 import { Cloud, CloudRain, Sun, Wind, Droplets, Eye } from "lucide-react"
 import { fetchWeatherForHallein } from "@/lib/weather-api"
 
@@ -49,10 +48,11 @@ export function WeatherWidget() {
   const currentTemp = weather.current.temperature
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Current Weather */}
-      <Card>
-        <CardContent className="p-4 bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700">
+    <div className="flex flex-col">
+      {/* Weather Card Group - visually merge border radius */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl border border-gray-700 overflow-hidden">
+        <div className="px-6 py-4">
+          {/* Current Weather */}
           <div className="text-xs text-blue-400 mb-2 flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             <span>{HALLEIN_LOCATION_LABEL}</span>
@@ -81,11 +81,9 @@ export function WeatherWidget() {
               <span className="text-gray-400">{weather.current.visibility} mi</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
-      {/* Hourly Forecast */}
-      <Card>
-        <CardContent className="p-4 bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700">
+        </div>
+        <div className="border-t border-gray-700 px-6 py-4">
+          {/* Hourly Forecast */}
           <div className="text-sm text-gray-400 mb-3">Nächste 6 Stunden</div>
           <div className="grid grid-cols-6 gap-2">
             {weather.hourly.map((hour: any, index: number) => (
@@ -99,8 +97,8 @@ export function WeatherWidget() {
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

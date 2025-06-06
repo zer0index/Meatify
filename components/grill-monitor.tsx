@@ -73,7 +73,7 @@ export default function GrillMonitor() {
 
       <div className="container mx-auto px-4 py-6">
         {/* Status Cards Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-start">
           <LiveHighlightsCard sensors={sensors} selectedMeats={selectedMeats} isCelsius={isCelsius} />
           <WeatherWidget />
         </div>
