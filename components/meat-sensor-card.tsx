@@ -8,6 +8,7 @@ import { Thermometer, AlertCircle } from "lucide-react"
 import { TemperatureChart } from "@/components/temperature-chart"
 import type { Sensor, MeatType } from "@/lib/types"
 import { convertTemp, formatTemp, getMeatInfo } from "@/lib/utils"
+import Image from "next/image"
 
 interface MeatSensorCardProps {
   sensor: Sensor
@@ -59,9 +60,22 @@ export function MeatSensorCard({
           <>
             <div
               className="relative h-32 mb-3 rounded-md overflow-hidden bg-center bg-cover cursor-pointer"
-              style={{ backgroundImage: `url(${meatInfo?.image})` }}
               onClick={onMeatSelectorClick}
             >
+              {meatInfo?.image ? (
+                <Image
+                  src={meatInfo.image}
+                  alt={meatInfo.label}
+                  fill
+                  style={{ objectFit: "cover" }}
+                  sizes="(max-width: 600px) 100vw, 33vw"
+                  priority={true}
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-700 flex items-center justify-center text-gray-400">
+                  No image
+                </div>
+              )}
               {isOverTemp && (
                 <div className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full">
                   <AlertCircle className="h-5 w-5" />
