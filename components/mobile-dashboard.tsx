@@ -36,6 +36,13 @@ export default function MobileDashboard(props: MobileDashboardProps) {
   // Overview Tab: All sensors minimized, tap to expand
   const renderOverview = () => (
     <div className="flex flex-col h-full justify-between p-2">
+      {/* Mini Live Highlights at the top */}
+      <LiveHighlightsCard
+        sensors={props.sensors}
+        selectedMeats={props.selectedMeats}
+        isCelsius={props.isCelsius}
+        compact={true}
+      />
       {/* Meat Sensors Section */}
       <div className="mb-2">
         <div className="text-amber-400 text-sm font-bold mb-1 pl-1">Meat Sensors</div>

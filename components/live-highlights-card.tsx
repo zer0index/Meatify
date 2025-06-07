@@ -9,9 +9,10 @@ interface LiveHighlightsCardProps {
   sensors: Sensor[]
   selectedMeats: Record<number, MeatType | null>
   isCelsius: boolean
+  compact?: boolean // NEW: compact mode for minimal display
 }
 
-export function LiveHighlightsCard({ sensors, selectedMeats, isCelsius }: LiveHighlightsCardProps) {
+export function LiveHighlightsCard({ sensors, selectedMeats, isCelsius, compact = false }: LiveHighlightsCardProps) {
   const getHighlights = () => {
     if (sensors.length === 0) return null
 
@@ -58,6 +59,54 @@ export function LiveHighlightsCard({ sensors, selectedMeats, isCelsius }: LiveHi
   }
 
   const highlights = getHighlights()
+
+  if (compact) {
+    // Minimal, horizontal, no card header, smaller paddings
+    return (
+      <div className="flex flex-col gap-1 p-2 rounded-lg bg-gray-900/80 border border-gray-700 mb-2">
+        {highlights ? (
+          <div className="flex flex-wrap gap-2 items-center justify-between text-xs">
+            {/* Avg Grill Temp */}
+            <div className="flex items-center gap-1">
+              <Thermometer className="h-4 w-4 text-amber-500" />
+              <span className="font-semibold text-white">{formatTemp(Number(formatFloat(highlights.avgGrillTemp)), isCelsius)}</span>
+            </div>
+            {/* Closest to Done */}
+            {highlights.closestToTarget &&
+              typeof highlights.closestToTarget === "object" &&
+              "meatType" in highlights.closestToTarget &&
+              "sensor" in highlights.closestToTarget && (
+                <div className="flex items-center gap-1">
+                  <span className="text-orange-500 text-xs">🥩</span>
+                  <span className="text-white font-medium">
+                    {getMeatInfo((highlights.closestToTarget as { sensor: Sensor; meatType: MeatType }).meatType).label}
+                  </span>
+                  <span className="text-orange-400">
+                    {formatTemp(Number(formatFloat((highlights.closestToTarget as { sensor: Sensor; meatType: MeatType }).sensor.currentTemp)), isCelsius)}
+                  </span>
+                </div>
+              )}
+            {/* Overheat Alert */}
+            {highlights.hasOverheatAlert && (
+              <div className="flex items-center gap-1 animate-pulse">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <span className="text-red-400 font-semibold">Overheat!</span>
+              </div>
+            )}
+            {/* Ready Meats */}
+            {highlights.readyMeats && highlights.readyMeats.length > 0 && (
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span className="text-green-400 font-semibold">Ready: {highlights.readyMeats.map((item) => getMeatInfo(item.meatType).label).join(", ")}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="text-gray-500 italic">No data</span>
+        )}
+      </div>
+    )
+  }
 
   return (
     <Card className="h-[280px] bg-gray-900/60 border-gray-700">
