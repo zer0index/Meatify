@@ -34,20 +34,19 @@ export function AmbientSensorCard({ sensor, isCelsius, onTargetTempChange, compa
       // Convert back to Celsius if needed for storage
       const tempInCelsius = isCelsius ? newTemp : convertTemp(newTemp, true)
       onTargetTempChange(tempInCelsius)
-    }
-    setIsEditing(false)
+    }    setIsEditing(false)
   }
-
+  
   if (compact) {
     return (
-      <Card className="p-1 flex flex-col items-center justify-center bg-gray-800 border border-gray-700 h-28 w-full">
-        <CardContent className="flex flex-col items-center justify-center p-1">
-          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center mb-1">
-            <Thermometer className="h-5 w-5 text-amber-500" />
+      <Card className="p-2 flex flex-col bg-gray-800 border border-gray-700 h-[100px] w-full shadow-md">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mb-1">
+            <Thermometer className="h-6 w-6 text-amber-500" />
           </div>
-          <div className="text-xs font-semibold text-amber-500 truncate w-full text-center">Grill {sensor.id + 1}</div>
-          <div className="text-xs text-white font-mono">{formatTemp(currentTemp, isCelsius)}</div>
-        </CardContent>
+        </div>
+        <div className="text-sm font-semibold text-amber-500 text-center">Grill {sensor.id + 1}</div>
+        <div className="text-2xl font-bold text-white text-center">{currentTemp}°C</div>
       </Card>
     )
   }

@@ -78,10 +78,11 @@ export default function MobileDashboard(props: MobileDashboardProps) {
           isCelsius={props.isCelsius}
           compact={true}
         />
-      </div>      {/* Meat Sensors Section */}
-      <div className="mb-2 mt-1">
-        <div className="text-amber-400 text-sm font-bold mb-1 pl-1">Meat Sensors</div>
-        <div className="grid grid-cols-2 gap-2 w-full" style={{ minHeight: "40vh" }}>
+      </div>
+      
+      {/* Meat Sensors Section */}
+      <div className="mb-1 mt-1">
+        <div className="grid grid-cols-2 gap-2 w-full" style={{ minHeight: "33vh" }}>
           {meatSensors.map((sensor) => (
             <div
               key={sensor.id}
@@ -99,12 +100,13 @@ export default function MobileDashboard(props: MobileDashboardProps) {
               />
             </div>
           ))}
-        </div>
-      </div>
+        </div>      </div>
+        {/* Visual Separator */}
+      <div className="w-full h-[1px] bg-gray-700 my-3"></div>
+      
       {/* Grill Sensors Section */}
-      <div>
-        <div className="text-amber-400 text-sm font-bold mb-1 pl-1">Grill Sensors</div>
-        <div className="flex gap-1 w-full" style={{ height: "18vh" }}>
+      <div className="mt-1">
+        <div className="flex gap-1 w-full mb-2" style={{ height: "18vh" }}>
           {ambientSensors.map((sensor) => (
             <div key={sensor.id} className="flex-1 min-w-0">
               <AmbientSensorCard

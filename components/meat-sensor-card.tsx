@@ -94,10 +94,8 @@ export function MeatSensorCard({
     const progress = Math.max(0, Math.min(100, ((currentTemp - minTemp) / (maxTemp - minTemp)) * 100));
     
     return (
-      <Card className="p-2 flex flex-col bg-gray-800 border border-gray-700 w-full h-[180px]">
-        {/* Header Section */}
-        <div className="flex justify-between items-center mb-2">
-          <div className="text-xs font-semibold text-white">Probe {sensor.id - 1}</div>
+      <Card className="p-2 flex flex-col bg-gray-800 border border-gray-700 w-full h-[170px] shadow-md">        {/* Header Section */}
+        <div className="flex justify-end items-center mb-2">
           <div className={`text-xs text-white px-2 py-0.5 rounded-full ${status.color}`}>
             {status.text}
           </div>
@@ -133,7 +131,7 @@ export function MeatSensorCard({
               />
             </svg>            {/* Center with temperature value */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl font-bold text-white">{currentTemp}°</span>
+              <span className="text-3xl font-bold text-white">{currentTemp}°</span>
             </div>
           </div>
         </div>
