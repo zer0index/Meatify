@@ -206,16 +206,14 @@ export function LiveHighlightsCard({ sensors, selectedMeats, isCelsius, compact 
   //   </div>
   // )}
   // Remove all lines that reference highlights.closestToTarget.sensor in the main (non-compact) render.
-
   return (
-    <Card className="w-full h-full m-3 bg-gray-900/60 border-gray-700 flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="w-full h-full m-0 bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl overflow-hidden h-[280px] flex flex-col">
+      <CardHeader className="pb-4 pt-4 px-6 flex-shrink-0 flex-grow-0">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-500">
           <Flame className="h-5 w-5" />
           Live Highlights
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 flex-1 flex flex-col justify-start">
+        </CardTitle>      </CardHeader>
+      <CardContent className="flex-1 flex flex-col justify-start space-y-4 px-6 pb-4 pt-0">
         {highlights ? (
           <>
             {/* Average Grill Temperature */}

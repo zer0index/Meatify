@@ -10,7 +10,6 @@ import { MeatSelector } from "@/components/meat-selector"
 import { SessionHeader } from "@/components/session-header"
 import { LiveHighlightsCard } from "@/components/live-highlights-card"
 import { WeatherWidget } from "@/components/weather-widget"
-import { DebugWindow } from "@/components/debug-window"
 import { fetchSensorData } from "@/lib/api"
 import type { Sensor, MeatType } from "@/lib/types"
 
@@ -109,11 +108,14 @@ export default function GrillMonitor() {
       {/* Session Timer Header */}
       <SessionHeader sessionStartTime={sessionStartTime} isSessionActive={isSessionActive} />
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Status Cards Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-start">
-          <LiveHighlightsCard sensors={sensors} selectedMeats={selectedMeats} isCelsius={isCelsius} />
-          <WeatherWidget />
+      <div className="container mx-auto px-4 py-6">        {/* Status Cards Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-stretch">
+          <div className="h-[280px] flex flex-col">
+            <LiveHighlightsCard sensors={sensors} selectedMeats={selectedMeats} isCelsius={isCelsius} />
+          </div>
+          <div className="h-[280px] flex flex-col">
+            <WeatherWidget />
+          </div>
         </div>
 
         {/* Meat Temperatures Section */}
@@ -154,9 +156,6 @@ export default function GrillMonitor() {
             onClose={() => setShowMeatSelector(null)}
           />
         )}
-
-        {/* Debug Window */}
-        <DebugWindow />
       </div>
     </div>
   )

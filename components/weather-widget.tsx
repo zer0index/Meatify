@@ -46,11 +46,10 @@ export function WeatherWidget() {
   if (!weather) return <div>Lädt Wetterdaten...</div>
 
   const currentTemp = weather.current.temperature
-
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-full">
       {/* Weather Card Group - visually merge border radius */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl border border-gray-700 overflow-hidden h-[280px]">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl border border-gray-700 overflow-hidden h-[280px] flex flex-col justify-between">
         <div className="px-6 py-4">
           {/* Current Weather */}
           <div className="text-xs text-blue-400 mb-2 flex items-center gap-1">
@@ -82,7 +81,7 @@ export function WeatherWidget() {
             </div>
           </div>
         </div>
-        <div className="border-t border-gray-700 px-6 py-4">
+        <div className="border-t border-gray-700 px-6 pt-4 pb-0">
           {/* Hourly Forecast */}
           <div className="text-sm text-gray-400 mb-3">Nächste 6 Stunden</div>
           <div className="grid grid-cols-6 gap-2">
