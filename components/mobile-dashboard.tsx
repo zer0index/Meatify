@@ -69,9 +69,9 @@ export default function MobileDashboard(props: MobileDashboardProps) {
 
   // Overview Tab: All sensors minimized, tap to expand
   const renderOverview = () => (
-    <div className="flex flex-col h-full justify-between p-2">
+    <div className="flex flex-col h-full bg-black p-2 pb-0">
       {/* Mini Live Highlights at the top, now sticky */}
-      <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm">
+      <div className="sticky top-0 z-20 bg-black/90 backdrop-blur-sm pb-2">
         <LiveHighlightsCard
           sensors={props.sensors}
           selectedMeats={props.selectedMeats}
@@ -80,57 +80,62 @@ export default function MobileDashboard(props: MobileDashboardProps) {
         />
       </div>
       
-      {/* Meat Sensors Section */}
-      <div className="mb-1 mt-1">
-        <div className="grid grid-cols-2 gap-2 w-full" style={{ minHeight: "33vh" }}>
-          {meatSensors.map((sensor) => (
-            <div
-              key={sensor.id}
-              onClick={() => setExpandedSensor(sensor.id)}
-              style={{ cursor: "pointer" }}
-              className="transform transition-transform active:scale-95"
-            >
-              <MeatSensorCard
-                sensor={sensor}
-                selectedMeat={props.selectedMeats[sensor.id]}
-                isCelsius={props.isCelsius}
-                onMeatSelectorClick={() => props.onMeatSelectorClick(sensor.id)}
-                onTargetTempChange={(temp) => props.onTargetTempChange(sensor.id, temp)}
-                compact={true}
-              />
-            </div>
-          ))}
-        </div>      </div>
-        {/* Visual Separator */}
-      <div className="w-full h-[1px] bg-gray-700 my-3"></div>
-      
-      {/* Grill Sensors Section */}
-      <div className="mt-1">
-        <div className="flex gap-1 w-full mb-2" style={{ height: "18vh" }}>
-          {ambientSensors.map((sensor) => (
-            <div key={sensor.id} className="flex-1 min-w-0">
-              <AmbientSensorCard
-                sensor={sensor}
-                isCelsius={props.isCelsius}
-                onTargetTempChange={(temp) => props.onTargetTempChange(sensor.id, temp)}
-                compact={true}
-              />
-            </div>
-          ))}
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto hide-scrollbar">
+        {/* Meat Sensors Section */}
+        <div className="pt-1 pb-3">
+          <div className="grid grid-cols-2 gap-2.5 w-full">
+            {meatSensors.map((sensor) => (
+              <div
+                key={sensor.id}
+                onClick={() => setExpandedSensor(sensor.id)}
+                className="transform transition-transform active:scale-95"
+              >
+                <MeatSensorCard
+                  sensor={sensor}
+                  selectedMeat={props.selectedMeats[sensor.id]}
+                  isCelsius={props.isCelsius}
+                  onMeatSelectorClick={() => props.onMeatSelectorClick(sensor.id)}
+                  onTargetTempChange={(temp) => props.onTargetTempChange(sensor.id, temp)}
+                  compact={true}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Visual Separator - more subtle and consistent */}
+        <div className="w-full h-[1px] bg-gray-800 mb-3 mx-auto" style={{ maxWidth: "92%" }}></div>
+        
+        {/* Grill Sensors Section */}
+        <div className="pb-3">
+          <div className="flex gap-2.5 w-full">
+            {ambientSensors.map((sensor) => (
+              <div key={sensor.id} className="flex-1 min-w-0">
+                <AmbientSensorCard
+                  sensor={sensor}
+                  isCelsius={props.isCelsius}
+                  onTargetTempChange={(temp) => props.onTargetTempChange(sensor.id, temp)}
+                  compact={true}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
+      
       {/* Sensor Detail Modal */}
       {expandedSensor !== null && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center"
           onClick={() => setExpandedSensor(null)}
         >
           <div
-            className="w-full max-w-md bg-gray-900 rounded-lg p-4 relative"
+            className="w-full max-w-md bg-gray-900 rounded-lg p-4 relative mx-4"
             onClick={e => e.stopPropagation()}
           >
             <button
-              className="absolute top-2 right-2 text-white text-2xl"
+              className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl"
               onClick={() => setExpandedSensor(null)}
               aria-label="Close"
             >
@@ -254,20 +259,30 @@ export default function MobileDashboard(props: MobileDashboardProps) {
         {activeTab === "history" && renderHistory()}
         {activeTab === "highlights" && renderHighlights()}
         {activeTab === "weather" && renderWeather()}
-        {activeTab === "debug" && renderDebug()}
-      </div>
+        {activeTab === "debug" && renderDebug()}      </div>
+      
       {/* Bottom Navigation Bar with icons */}
-      <nav className="flex justify-around items-center h-14 bg-gray-900 border-t border-gray-700">
+      <nav className="flex justify-around items-center h-14 bg-gray-900 border-t border-gray-700 shadow-lg">
         {TABS.map((tab) => {
           const Icon = tab.icon
+          const isActive = activeTab === tab.key
           return (
             <button
               key={tab.key}
-              className={`flex-1 flex flex-col items-center justify-center py-1 ${activeTab === tab.key ? "text-amber-500" : "text-gray-400"}`}
+              className={`flex-1 flex flex-col items-center justify-center py-1 relative ${
+                isActive ? "text-amber-500" : "text-gray-400 hover:text-gray-200"
+              }`}
               onClick={() => setActiveTab(tab.key)}
               aria-label={tab.label}
             >
-              <Icon className="w-6 h-6 mb-0.5" />
+              <Icon className={`w-6 h-6 transition-all duration-300 ${
+                isActive ? 'scale-110' : ''
+              }`} />
+              
+              {/* Small dot indicator for active tab */}
+              {isActive && (
+                <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-amber-500"></div>
+              )}
               {/* Optionally, show label only for active tab or on long press */}
             </button>
           )

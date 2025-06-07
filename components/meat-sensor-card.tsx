@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,11 +26,27 @@ export function MeatSensorCard({
   onMeatSelectorClick,
   onTargetTempChange,
   compact = false,
-}: MeatSensorCardProps) {
+}: MeatSensorCardProps) {  
   const [isEditing, setIsEditing] = useState(false)
   const [inputValue, setInputValue] = useState("")
 
   const currentTemp = isCelsius ? sensor.currentTemp : convertTemp(sensor.currentTemp, false)
+  
+  // Add state for animation
+  const [isTemperatureChanging, setIsTemperatureChanging] = useState(false)
+  const previousTemp = useRef(currentTemp)
+  
+  // Effect to detect temperature changes and trigger animation
+  useEffect(() => {
+    if (previousTemp.current !== currentTemp) {
+      setIsTemperatureChanging(true)
+      const timer = setTimeout(() => {
+        setIsTemperatureChanging(false)
+      }, 1000)
+      previousTemp.current = currentTemp
+      return () => clearTimeout(timer)
+    }
+  }, [currentTemp])
   const targetTemp = isCelsius ? sensor.targetTemp : convertTemp(sensor.targetTemp, false)
   const isOverTemp = currentTemp > targetTemp
 
@@ -50,7 +66,8 @@ export function MeatSensorCard({
     }
     setIsEditing(false)
   }
-  if (compact) {    // Calculate additional values for the enhanced card
+  if (compact) {
+    // Calculate additional values for the enhanced card
     const temperatureToGo = targetTemp - currentTemp > 0 ? targetTemp - currentTemp : 0;
     
     // Calculate estimated time based on temperature rise rate from history
@@ -92,22 +109,28 @@ export function MeatSensorCard({
     const minTemp = 0; // Minimum temperature for display
     const maxTemp = Math.max(targetTemp + 5, 90); // Maximum temperature (either target+5 or at least 90)
     const progress = Math.max(0, Math.min(100, ((currentTemp - minTemp) / (maxTemp - minTemp)) * 100));
-    
-    return (
-      <Card className="p-2 flex flex-col bg-gray-800 border border-gray-700 w-full h-[170px] shadow-md">        {/* Header Section */}
-        <div className="flex justify-end items-center mb-2">
-          <div className={`text-xs text-white px-2 py-0.5 rounded-full ${status.color}`}>
+      return (
+      <Card className="flex flex-col bg-gray-800 border border-gray-700 w-full h-[170px] shadow-md overflow-hidden">
+        {/* Header Section */}
+        <div className="flex justify-between items-center px-3 pt-2.5 pb-1.5">
+          <div className="h-4"></div> {/* Empty spacer to balance the badge */}
+          <div className={`text-xs font-medium text-white px-2 py-0.5 rounded-full shadow-sm transition-all duration-300 ${
+            status.color} ${isTemperatureChanging ? 'scale-105' : ''}`}>
             {status.text}
           </div>
         </div>
-        
         {/* Meat Name */}
-        <div className="text-sm font-semibold text-amber-500 text-center mb-1">
-          {meatInfo?.label || "Select Meat"}
+        <div className="text-sm font-semibold text-amber-500 text-center px-1.5 truncate">
+          <span className="transition-all duration-300 hover:underline cursor-pointer" onClick={onMeatSelectorClick}>
+            {meatInfo?.label || "Select Meat"}
+          </span>
         </div>
           {/* Temperature Circle */}
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center py-1">
           <div className="relative w-16 h-16">
+            {/* Background circle with subtle glow */}
+            <div className="absolute inset-0 rounded-full bg-gray-900/30 shadow-inner"></div>
+            
             {/* Progress ring - dynamically set the stroke-dashoffset based on progress */}
             <svg className="w-full h-full absolute -rotate-90" viewBox="0 0 100 100">
               <circle 
@@ -129,36 +152,47 @@ export function MeatSensorCard({
                 strokeDashoffset={283 - (283 * progress) / 100}
                 strokeLinecap="round"
               />
-            </svg>            {/* Center with temperature value */}
+            </svg>
+            {/* Center with temperature value */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-3xl font-bold text-white">{currentTemp}°</span>
+              <span className={`text-3xl font-bold text-white transition-all duration-300 ${
+                isTemperatureChanging ? 'scale-110 text-amber-300' : ''
+              }`}>
+                {currentTemp}°
+              </span>
             </div>
           </div>
         </div>
-        
-        {/* Temperature Range Bar */}
-        <div className="w-full mt-1 mb-2">
-          <div className="h-1 w-full bg-gray-700 rounded-full overflow-hidden">
+          {/* Temperature Range Bar */}
+        <div className="w-full px-3">
+          <div className="h-1.5 w-full bg-gray-700 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-amber-500 rounded-full" 
+              className={`h-full rounded-full transition-all duration-500 ease-out ${
+                isOverTemp ? 'bg-red-500' : 
+                temperatureToGo <= 5 ? 'bg-yellow-500' : 
+                'bg-amber-500'
+              }`}
               style={{ width: `${progress}%` }}
             ></div>
           </div>
-          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5 px-0.5">
             <span>{minTemp}°</span>
             <span>{maxTemp}°</span>
           </div>
         </div>
-        
         {/* Footer Info */}
-        <div className="flex justify-between text-xs mt-1">
-          <div className="flex-1 pr-2">
-            <span className="text-gray-400 whitespace-nowrap">To go:</span>
-            <span className="text-white ml-1">{temperatureToGo}°</span>
+        <div className="flex justify-between text-xs px-3 py-2 mt-auto bg-gray-900/50 border-t border-gray-700/30">
+          <div className="flex items-center">
+            <span className="text-gray-400 whitespace-nowrap font-medium">To go:</span>
+            <span className="text-white font-semibold ml-1.5">{temperatureToGo}°</span>
           </div>
-          <div className="flex-1 text-right">
-            <span className="text-gray-400 whitespace-nowrap">Est. time:</span>
-            <span className="text-green-400 ml-1 whitespace-nowrap">
+          <div className="flex items-center">
+            <span className="text-gray-400 whitespace-nowrap font-medium">Est. time:</span>
+            <span className={`font-semibold ml-1.5 whitespace-nowrap ${
+              estTimeMinutes === 0 ? 'text-green-400' : 
+              estTimeMinutes < 15 ? 'text-yellow-400' : 
+              'text-green-400'
+            }`}>
               {estTimeMinutes > 0 ? 
                 estTimeMinutes < 60 ? 
                   `${estTimeMinutes} min` : 

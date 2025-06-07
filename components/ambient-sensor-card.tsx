@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Thermometer, Flame } from "lucide-react"
@@ -18,10 +18,25 @@ interface AmbientSensorCardProps {
 export function AmbientSensorCard({ sensor, isCelsius, onTargetTempChange, compact = false }: AmbientSensorCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [inputValue, setInputValue] = useState("")
-
   const currentTemp = isCelsius ? sensor.currentTemp : convertTemp(sensor.currentTemp, false)
   const targetTemp = isCelsius ? sensor.targetTemp : convertTemp(sensor.targetTemp, false)
   const isOverTemp = currentTemp > targetTemp
+  
+  // Add state for animation
+  const [isTemperatureChanging, setIsTemperatureChanging] = useState(false)
+  const previousTemp = useRef(currentTemp)
+  
+  // Effect to detect temperature changes and trigger animation
+  useEffect(() => {
+    if (previousTemp.current !== currentTemp) {
+      setIsTemperatureChanging(true)
+      const timer = setTimeout(() => {
+        setIsTemperatureChanging(false)
+      }, 1000)
+      previousTemp.current = currentTemp
+      return () => clearTimeout(timer)
+    }
+  }, [currentTemp])
 
   const handleEditStart = () => {
     setInputValue(targetTemp.toString())
@@ -33,20 +48,36 @@ export function AmbientSensorCard({ sensor, isCelsius, onTargetTempChange, compa
     if (!isNaN(newTemp)) {
       // Convert back to Celsius if needed for storage
       const tempInCelsius = isCelsius ? newTemp : convertTemp(newTemp, true)
-      onTargetTempChange(tempInCelsius)
-    }    setIsEditing(false)
+      onTargetTempChange(tempInCelsius)    }
+    setIsEditing(false)
   }
   
   if (compact) {
     return (
-      <Card className="p-2 flex flex-col bg-gray-800 border border-gray-700 h-[100px] w-full shadow-md">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mb-1">
-            <Thermometer className="h-6 w-6 text-amber-500" />
+      <Card className="flex flex-col bg-gray-800 border border-gray-700 h-[100px] w-full shadow-md overflow-hidden">
+        {/* Top section */}        <div className="flex-1 flex items-center justify-center pt-1">
+          <div className={`w-12 h-12 rounded-full bg-gray-900/40 flex items-center justify-center shadow-inner transition-all duration-300 ${
+            isTemperatureChanging ? 'bg-gray-800/60 scale-105' : ''
+          }`}>
+            <Thermometer className={`h-6 w-6 transition-colors ${
+              isOverTemp ? 'text-red-500' : 'text-amber-500'
+            }`} />
           </div>
         </div>
-        <div className="text-sm font-semibold text-amber-500 text-center">Grill {sensor.id + 1}</div>
-        <div className="text-2xl font-bold text-white text-center">{currentTemp}°C</div>
+        
+        {/* Label and Temperature */}
+        <div className="bg-gray-900/50 border-t border-gray-700/30 pt-1 pb-2">
+          <div className="text-sm font-semibold text-amber-500 text-center">
+            Grill {sensor.id + 1}
+          </div>
+          <div className="text-2xl font-bold text-white text-center">
+            <span className={`transition-all duration-300 ${
+              isTemperatureChanging ? 'scale-110 text-amber-300' : ''
+            }`}>
+              {currentTemp}°C
+            </span>
+          </div>
+        </div>
       </Card>
     )
   }
