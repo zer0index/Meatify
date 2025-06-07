@@ -109,14 +109,14 @@ export function LiveHighlightsCard({ sensors, selectedMeats, isCelsius, compact 
   }
 
   return (
-    <Card className="h-[280px] bg-gray-900/60 border-gray-700">
+    <Card className="w-full h-full m-3 bg-gray-900/60 border-gray-700 flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold text-amber-500">
           <Flame className="h-5 w-5" />
           Live Highlights
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1 flex flex-col justify-start">
         {highlights ? (
           <>
             {/* Average Grill Temperature */}

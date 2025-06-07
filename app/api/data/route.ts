@@ -53,12 +53,12 @@ export async function GET(): Promise<NextResponse> {
 
   // Keine Daten verfügbar
   return NextResponse.json({ 
-    error: 'Keine Sensordaten verfügbar',
+    data: [],
     debug: {
       ...debugInfo,
       error: 'Keine Daten von Node-RED oder geposteten Daten verfügbar'
     }
-  }, { status: 404 })
+  }, { status: 200 })
 }
 
 export async function POST(req: NextRequest) {

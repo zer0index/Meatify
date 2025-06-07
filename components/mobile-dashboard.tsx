@@ -1,17 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { getMeatInfo } from "@/lib/utils"
+import { useEffect, useState } from "react"
 import { MeatSensorCard } from "./meat-sensor-card"
 import { AmbientSensorCard } from "./ambient-sensor-card"
 import { LiveHighlightsCard } from "./live-highlights-card"
 import { WeatherWidget } from "./weather-widget"
 import { MeatSelector } from "./meat-selector"
 import type { Sensor, MeatType } from "@/lib/types"
+import { Home, History, Flame, Cloud, Bug } from "lucide-react"
+import { TemperatureChart } from "./temperature-chart"
 
 const TABS = [
-  { key: "overview", label: "Overview" },
-  { key: "highlights", label: "Live Highlights" },
-  { key: "weather", label: "Weather" },
+  { key: "overview", label: "Overview", icon: Home },
+  { key: "history", label: "History", icon: History },
+  { key: "highlights", label: "Live Highlights", icon: Flame },
+  { key: "weather", label: "Weather", icon: Cloud },
+  { key: "debug", label: "Debug", icon: Bug },
 ]
 
 interface MobileDashboardProps {
@@ -32,6 +37,35 @@ export default function MobileDashboard(props: MobileDashboardProps) {
   // Split sensors
   const ambientSensors = props.sensors.filter((s) => s.id < 2)
   const meatSensors = props.sensors.filter((s) => s.id >= 2)
+
+  // Debug info state and effect (moved from renderDebug)
+  type DebugInfo = {
+    dataSource: 'mock' | 'node-red'
+    lastUpdate: string
+    error?: string
+    nodeRedStatus?: 'available' | 'unavailable' | 'error'
+  }
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null)
+  const [debugError, setDebugError] = useState<string | null>(null)
+  useEffect(() => {
+    const fetchDebugInfo = async () => {
+      try {
+        const response = await fetch('/api/data')
+        if (response.ok) {
+          const data = await response.json()
+          setDebugInfo(data.debug)
+          setDebugError(null)
+        } else {
+          setDebugError('Failed to fetch debug info')
+        }
+      } catch (err) {
+        setDebugError(err instanceof Error ? err.message : 'Unknown error')
+      }
+    }
+    fetchDebugInfo()
+    const interval = setInterval(fetchDebugInfo, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Overview Tab: All sensors minimized, tap to expand
   const renderOverview = () => (
@@ -125,24 +159,115 @@ export default function MobileDashboard(props: MobileDashboardProps) {
     </div>
   )
 
+  // History Tab
+  const renderHistory = () => (
+    <div className="p-2 h-full overflow-y-auto flex flex-col gap-4">
+      <h2 className="text-lg font-semibold text-amber-500 mb-2">Temperature History</h2>
+      {/* Meat Sensors Charts FIRST */}
+      {meatSensors.map((sensor) => {
+        const meatType = props.selectedMeats[sensor.id]
+        const meatLabel = meatType ? getMeatInfo(meatType).label : `Meat Sensor #${sensor.id - 1}`
+        return (
+          <div key={sensor.id} className="mb-4">
+            <div className="text-sm font-bold text-white mb-1">{meatLabel}</div>
+            <div className="bg-gray-900 rounded-lg p-2">
+              <TemperatureChart
+                data={sensor.history}
+                isCelsius={props.isCelsius}
+                targetTemp={sensor.targetTemp}
+                compact={false}
+              />
+            </div>
+          </div>
+        )
+      })}
+      {/* Grill Sensors Charts SECOND */}
+      {ambientSensors.map((sensor) => (
+        <div key={sensor.id} className="mb-4">
+          <div className="text-sm font-bold text-white mb-1">Grill Sensor #{sensor.id + 1}</div>
+          <div className="bg-gray-900 rounded-lg p-2">
+            <TemperatureChart
+              data={sensor.history}
+              isCelsius={props.isCelsius}
+              targetTemp={sensor.targetTemp}
+              compact={false}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
+  // Debug Tab
+  const renderDebug = () => {
+    return (
+      <div className="p-2 h-full overflow-y-auto flex flex-col gap-4">
+        <h2 className="text-lg font-semibold text-amber-500 mb-2">Debug & Diagnostics</h2>
+        <div className="bg-gray-900 rounded-lg p-4">
+          {debugError ? (
+            <div className="text-red-400 mb-2">Error: {debugError}</div>
+          ) : debugInfo ? (
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="font-medium">Data Source: </span>
+                <span className={debugInfo.dataSource === 'node-red' ? 'text-green-400' : 'text-yellow-400'}>
+                  {debugInfo.dataSource}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium">Node-RED Status: </span>
+                <span className={
+                  debugInfo.nodeRedStatus === 'available' ? 'text-green-400' :
+                  debugInfo.nodeRedStatus === 'unavailable' ? 'text-yellow-400' :
+                  debugInfo.nodeRedStatus === 'error' ? 'text-red-400' : ''
+                }>
+                  {debugInfo.nodeRedStatus}
+                </span>
+              </div>
+              {debugInfo.error && (
+                <div className="text-red-400">
+                  <span className="font-medium">Error: </span>
+                  {debugInfo.error}
+                </div>
+              )}
+              <div className="text-gray-400">
+                <span className="font-medium">Last Update: </span>
+                {debugInfo.lastUpdate ? new Date(debugInfo.lastUpdate).toLocaleString() : ''}
+              </div>
+            </div>
+          ) : (
+            <div className="text-gray-400">Loading debug info...</div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 flex flex-col bg-black">
       <div className="flex-1 overflow-hidden">
         {activeTab === "overview" && renderOverview()}
+        {activeTab === "history" && renderHistory()}
         {activeTab === "highlights" && renderHighlights()}
         {activeTab === "weather" && renderWeather()}
+        {activeTab === "debug" && renderDebug()}
       </div>
-      {/* Bottom Navigation Bar */}
-      <nav className="flex justify-around items-center h-16 bg-gray-900 border-t border-gray-700">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            className={`flex-1 py-2 text-center ${activeTab === tab.key ? "text-amber-500 font-bold" : "text-gray-400"}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Bottom Navigation Bar with icons */}
+      <nav className="flex justify-around items-center h-14 bg-gray-900 border-t border-gray-700">
+        {TABS.map((tab) => {
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.key}
+              className={`flex-1 flex flex-col items-center justify-center py-1 ${activeTab === tab.key ? "text-amber-500" : "text-gray-400"}`}
+              onClick={() => setActiveTab(tab.key)}
+              aria-label={tab.label}
+            >
+              <Icon className="w-6 h-6 mb-0.5" />
+              {/* Optionally, show label only for active tab or on long press */}
+            </button>
+          )
+        })}
       </nav>
       {/* Meat Selector Dialog */}
       {props.showMeatSelector !== null && (
