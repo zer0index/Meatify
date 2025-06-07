@@ -70,17 +70,19 @@ export default function MobileDashboard(props: MobileDashboardProps) {
   // Overview Tab: All sensors minimized, tap to expand
   const renderOverview = () => (
     <div className="flex flex-col h-full justify-between p-2">
-      {/* Mini Live Highlights at the top */}
-      <LiveHighlightsCard
-        sensors={props.sensors}
-        selectedMeats={props.selectedMeats}
-        isCelsius={props.isCelsius}
-        compact={true}
-      />
+      {/* Mini Live Highlights at the top, now sticky */}
+      <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-sm">
+        <LiveHighlightsCard
+          sensors={props.sensors}
+          selectedMeats={props.selectedMeats}
+          isCelsius={props.isCelsius}
+          compact={true}
+        />
+      </div>
       {/* Meat Sensors Section */}
-      <div className="mb-2">
+      <div className="mb-2 mt-1">
         <div className="text-amber-400 text-sm font-bold mb-1 pl-1">Meat Sensors</div>
-        <div className="grid grid-cols-2 gap-2 w-full" style={{ minHeight: "28vh" }}>
+        <div className="grid grid-cols-2 gap-1 w-full" style={{ minHeight: "28vh" }}>
           {meatSensors.map((sensor) => (
             <div
               key={sensor.id}
@@ -102,7 +104,7 @@ export default function MobileDashboard(props: MobileDashboardProps) {
       {/* Grill Sensors Section */}
       <div>
         <div className="text-amber-400 text-sm font-bold mb-1 pl-1">Grill Sensors</div>
-        <div className="flex gap-2 w-full" style={{ height: "18vh" }}>
+        <div className="flex gap-1 w-full" style={{ height: "18vh" }}>
           {ambientSensors.map((sensor) => (
             <div key={sensor.id} className="flex-1 min-w-0">
               <AmbientSensorCard
