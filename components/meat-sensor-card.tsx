@@ -50,22 +50,125 @@ export function MeatSensorCard({
     }
     setIsEditing(false)
   }
-
-  if (compact) {
-    // Minimal card for mobile grid
+  if (compact) {    // Calculate additional values for the enhanced card
+    const temperatureToGo = targetTemp - currentTemp > 0 ? targetTemp - currentTemp : 0;
+    
+    // Calculate estimated time based on temperature rise rate from history
+    const calculateEstimatedTime = () => {
+      if (temperatureToGo <= 0) return 0;
+      
+      // If we have history, use it to calculate the rate of temperature change
+      if (sensor.history && sensor.history.length >= 3) {
+        const recentHistory = sensor.history.slice(-10); // Get last 10 readings
+        const oldestTemp = recentHistory[0];
+        const newestTemp = recentHistory[recentHistory.length - 1];
+        const tempChange = newestTemp - oldestTemp;
+        
+        // If temperature is rising
+        if (tempChange > 0) {
+          // Assuming readings are 1 minute apart - adjust the rate per minute
+          const ratePerMinute = tempChange / (recentHistory.length - 1);
+          // Calculate minutes needed based on rate
+          return Math.round(temperatureToGo / ratePerMinute);
+        }
+      }
+      
+      // Fallback: Assume 1 degree per 3 minutes on average
+      return temperatureToGo * 3;
+    };
+    
+    const estTimeMinutes = calculateEstimatedTime();
+    
+    // Determine cooking status based on temperature difference
+    const getCookingStatus = () => {
+      if (isOverTemp) return { text: "Done", color: "bg-green-500" };
+      if (temperatureToGo <= 5) return { text: "Almost Done", color: "bg-yellow-500" };
+      return { text: "Cooking", color: "bg-amber-500" };
+    };
+    
+    const status = getCookingStatus();
+    
+    // Calculate progress percentage for temperature bar
+    const minTemp = 0; // Minimum temperature for display
+    const maxTemp = Math.max(targetTemp + 5, 90); // Maximum temperature (either target+5 or at least 90)
+    const progress = Math.max(0, Math.min(100, ((currentTemp - minTemp) / (maxTemp - minTemp)) * 100));
+    
     return (
-      <Card className="p-1 flex flex-col items-center justify-center bg-gray-800 border border-gray-700 h-28 w-full">
-        <CardContent className="flex flex-col items-center justify-center p-1">
-          {meatInfo?.image ? (
-            <img src={meatInfo.image} alt={meatInfo.label} className="w-8 h-8 rounded-full mb-1 object-cover" />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-gray-400 mb-1">?</div>
-          )}
-          <div className="text-xs font-semibold text-amber-500 truncate w-full text-center">
-            {meatInfo?.label || "Meat"}
+      <Card className="p-2 flex flex-col bg-gray-800 border border-gray-700 w-full h-[180px]">
+        {/* Header Section */}
+        <div className="flex justify-between items-center mb-2">
+          <div className="text-xs font-semibold text-white">Probe {sensor.id - 1}</div>
+          <div className={`text-xs text-white px-2 py-0.5 rounded-full ${status.color}`}>
+            {status.text}
           </div>
-          <div className="text-xs text-white font-mono">{formatTemp(currentTemp, isCelsius)}</div>
-        </CardContent>
+        </div>
+        
+        {/* Meat Name */}
+        <div className="text-sm font-semibold text-amber-500 text-center mb-1">
+          {meatInfo?.label || "Select Meat"}
+        </div>
+          {/* Temperature Circle */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="relative w-16 h-16">
+            {/* Progress ring - dynamically set the stroke-dashoffset based on progress */}
+            <svg className="w-full h-full absolute -rotate-90" viewBox="0 0 100 100">
+              <circle 
+                cx="50" 
+                cy="50" 
+                r="45" 
+                fill="none" 
+                stroke="#374151" 
+                strokeWidth="6"
+              />
+              <circle 
+                cx="50" 
+                cy="50" 
+                r="45" 
+                fill="none" 
+                stroke="#f59e0b" 
+                strokeWidth="6" 
+                strokeDasharray="283"
+                strokeDashoffset={283 - (283 * progress) / 100}
+                strokeLinecap="round"
+              />
+            </svg>            {/* Center with temperature value */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-2xl font-bold text-white">{currentTemp}°</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Temperature Range Bar */}
+        <div className="w-full mt-1 mb-2">
+          <div className="h-1 w-full bg-gray-700 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-amber-500 rounded-full" 
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+            <span>{minTemp}°</span>
+            <span>{maxTemp}°</span>
+          </div>
+        </div>
+        
+        {/* Footer Info */}
+        <div className="flex justify-between text-xs mt-1">
+          <div className="flex-1 pr-2">
+            <span className="text-gray-400 whitespace-nowrap">To go:</span>
+            <span className="text-white ml-1">{temperatureToGo}°</span>
+          </div>
+          <div className="flex-1 text-right">
+            <span className="text-gray-400 whitespace-nowrap">Est. time:</span>
+            <span className="text-green-400 ml-1 whitespace-nowrap">
+              {estTimeMinutes > 0 ? 
+                estTimeMinutes < 60 ? 
+                  `${estTimeMinutes} min` : 
+                  `${Math.floor(estTimeMinutes/60)}h ${estTimeMinutes % 60}m` 
+                : "Ready"}
+            </span>
+          </div>
+        </div>
       </Card>
     )
   }

@@ -78,16 +78,16 @@ export default function MobileDashboard(props: MobileDashboardProps) {
           isCelsius={props.isCelsius}
           compact={true}
         />
-      </div>
-      {/* Meat Sensors Section */}
+      </div>      {/* Meat Sensors Section */}
       <div className="mb-2 mt-1">
         <div className="text-amber-400 text-sm font-bold mb-1 pl-1">Meat Sensors</div>
-        <div className="grid grid-cols-2 gap-1 w-full" style={{ minHeight: "28vh" }}>
+        <div className="grid grid-cols-2 gap-2 w-full" style={{ minHeight: "40vh" }}>
           {meatSensors.map((sensor) => (
             <div
               key={sensor.id}
               onClick={() => setExpandedSensor(sensor.id)}
               style={{ cursor: "pointer" }}
+              className="transform transition-transform active:scale-95"
             >
               <MeatSensorCard
                 sensor={sensor}
