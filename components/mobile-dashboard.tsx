@@ -66,12 +66,11 @@ export default function MobileDashboard(props: MobileDashboardProps) {
     const interval = setInterval(fetchDebugInfo, 5000)
     return () => clearInterval(interval)
   }, [])
-
   // Overview Tab: All sensors minimized, tap to expand
   const renderOverview = () => (
-    <div className="flex flex-col h-full bg-black p-2 pb-0">
+    <div className="flex flex-col h-full w-full bg-black p-2 pb-0">
       {/* Mini Live Highlights at the top, now sticky */}
-      <div className="sticky top-0 z-20 bg-black/90 backdrop-blur-sm pb-2">
+      <div className="sticky top-0 z-20 bg-black/90 backdrop-blur-sm pb-2 w-full">
         <LiveHighlightsCard
           sensors={props.sensors}
           selectedMeats={props.selectedMeats}
@@ -81,10 +80,10 @@ export default function MobileDashboard(props: MobileDashboardProps) {
       </div>
       
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto hide-scrollbar">
+      <div className="flex-1 overflow-y-auto hide-scrollbar w-full">
         {/* Meat Sensors Section */}
-        <div className="pt-1 pb-3">
-          <div className="grid grid-cols-2 gap-2.5 w-full">
+        <div className="pt-1 pb-3 w-full">
+          <div className="grid grid-cols-2 gap-3 w-full px-1">
             {meatSensors.map((sensor) => (
               <div
                 key={sensor.id}
@@ -105,11 +104,11 @@ export default function MobileDashboard(props: MobileDashboardProps) {
         </div>
         
         {/* Visual Separator - more subtle and consistent */}
-        <div className="w-full h-[1px] bg-gray-800 mb-3 mx-auto" style={{ maxWidth: "92%" }}></div>
+        <div className="w-full h-[1px] bg-gray-800 mb-3 mx-auto"></div>
         
         {/* Grill Sensors Section */}
-        <div className="pb-3">
-          <div className="flex gap-2.5 w-full">
+        <div className="pb-3 px-1">
+          <div className="flex gap-3 w-full">
             {ambientSensors.map((sensor) => (
               <div key={sensor.id} className="flex-1 min-w-0">
                 <AmbientSensorCard
@@ -123,19 +122,18 @@ export default function MobileDashboard(props: MobileDashboardProps) {
           </div>
         </div>
       </div>
-      
-      {/* Sensor Detail Modal */}
+        {/* Sensor Detail Modal */}
       {expandedSensor !== null && (
         <div
           className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center"
           onClick={() => setExpandedSensor(null)}
         >
           <div
-            className="w-full max-w-md bg-gray-900 rounded-lg p-4 relative mx-4"
+            className="w-full max-w-full bg-gray-900 rounded-lg p-4 relative mx-2 my-auto"
             onClick={e => e.stopPropagation()}
           >
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl"
+              className="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl z-10"
               onClick={() => setExpandedSensor(null)}
               aria-label="Close"
             >
@@ -152,34 +150,40 @@ export default function MobileDashboard(props: MobileDashboardProps) {
         </div>
       )}
     </div>
-  )
-
-  // Highlights Tab
+  )  // Highlights Tab
   const renderHighlights = () => (
-    <div className="p-2 h-full flex items-center justify-center">
-      <LiveHighlightsCard sensors={props.sensors} selectedMeats={props.selectedMeats} isCelsius={props.isCelsius} />
+    <div className="p-2 h-full w-full flex items-center justify-center">
+      <div className="w-full max-w-full">
+        <LiveHighlightsCard 
+          sensors={props.sensors} 
+          selectedMeats={props.selectedMeats} 
+          isCelsius={props.isCelsius}
+        />
+      </div>
     </div>
   )
 
   // Weather Tab
   const renderWeather = () => (
-    <div className="p-2 h-full flex items-center justify-center">
-      <WeatherWidget />
+    <div className="p-2 h-full w-full flex items-center justify-center">
+      <div className="w-full max-w-full">
+        <WeatherWidget />
+      </div>
     </div>
   )
 
   // History Tab
   const renderHistory = () => (
-    <div className="p-2 h-full overflow-y-auto flex flex-col gap-4">
+    <div className="p-2 h-full w-full overflow-y-auto flex flex-col gap-4">
       <h2 className="text-lg font-semibold text-amber-500 mb-2">Temperature History</h2>
       {/* Meat Sensors Charts FIRST */}
       {meatSensors.map((sensor) => {
         const meatType = props.selectedMeats[sensor.id]
         const meatLabel = meatType ? getMeatInfo(meatType).label : `Meat Sensor #${sensor.id - 1}`
         return (
-          <div key={sensor.id} className="mb-4">
+          <div key={sensor.id} className="mb-4 w-full">
             <div className="text-sm font-bold text-white mb-1">{meatLabel}</div>
-            <div className="bg-gray-900 rounded-lg p-2">
+            <div className="bg-gray-900 rounded-lg p-2 w-full">
               <TemperatureChart
                 data={sensor.history}
                 isCelsius={props.isCelsius}
@@ -192,9 +196,9 @@ export default function MobileDashboard(props: MobileDashboardProps) {
       })}
       {/* Grill Sensors Charts SECOND */}
       {ambientSensors.map((sensor) => (
-        <div key={sensor.id} className="mb-4">
+        <div key={sensor.id} className="mb-4 w-full">
           <div className="text-sm font-bold text-white mb-1">Grill Sensor #{sensor.id + 1}</div>
-          <div className="bg-gray-900 rounded-lg p-2">
+          <div className="bg-gray-900 rounded-lg p-2 w-full">
             <TemperatureChart
               data={sensor.history}
               isCelsius={props.isCelsius}
@@ -206,13 +210,12 @@ export default function MobileDashboard(props: MobileDashboardProps) {
       ))}
     </div>
   )
-
   // Debug Tab
   const renderDebug = () => {
     return (
-      <div className="p-2 h-full overflow-y-auto flex flex-col gap-4">
+      <div className="p-2 h-full w-full overflow-y-auto flex flex-col gap-4">
         <h2 className="text-lg font-semibold text-amber-500 mb-2">Debug & Diagnostics</h2>
-        <div className="bg-gray-900 rounded-lg p-4">
+        <div className="bg-gray-900 rounded-lg p-4 w-full">
           {debugError ? (
             <div className="text-red-400 mb-2">Error: {debugError}</div>
           ) : debugInfo ? (
@@ -251,25 +254,25 @@ export default function MobileDashboard(props: MobileDashboardProps) {
       </div>
     )
   }
-
   return (
-    <div className="fixed inset-0 flex flex-col bg-black">
-      <div className="flex-1 overflow-hidden">
+    <div className="fixed inset-0 flex flex-col bg-black w-full h-full">
+      <div className="flex-1 w-full overflow-hidden">
         {activeTab === "overview" && renderOverview()}
         {activeTab === "history" && renderHistory()}
         {activeTab === "highlights" && renderHighlights()}
         {activeTab === "weather" && renderWeather()}
-        {activeTab === "debug" && renderDebug()}      </div>
+        {activeTab === "debug" && renderDebug()}
+      </div>
       
       {/* Bottom Navigation Bar with icons */}
-      <nav className="flex justify-around items-center h-14 bg-gray-900 border-t border-gray-700 shadow-lg">
+      <nav className="flex justify-around items-center h-16 bg-gray-900 border-t border-gray-700 shadow-lg w-full">
         {TABS.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.key
           return (
             <button
               key={tab.key}
-              className={`flex-1 flex flex-col items-center justify-center py-1 relative ${
+              className={`flex-1 flex flex-col items-center justify-center py-2 relative ${
                 isActive ? "text-amber-500" : "text-gray-400 hover:text-gray-200"
               }`}
               onClick={() => setActiveTab(tab.key)}
@@ -281,9 +284,9 @@ export default function MobileDashboard(props: MobileDashboardProps) {
               
               {/* Small dot indicator for active tab */}
               {isActive && (
-                <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-amber-500"></div>
+                <div className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-amber-500"></div>
               )}
-              {/* Optionally, show label only for active tab or on long press */}
+              <span className="text-xs mt-0.5">{tab.label}</span>
             </button>
           )
         })}

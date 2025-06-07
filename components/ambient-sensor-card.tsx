@@ -51,11 +51,10 @@ export function AmbientSensorCard({ sensor, isCelsius, onTargetTempChange, compa
       onTargetTempChange(tempInCelsius)    }
     setIsEditing(false)
   }
-  
-  if (compact) {
+    if (compact) {
     return (
-      <Card className="flex flex-col bg-gray-800 border border-gray-700 h-[100px] w-full shadow-md overflow-hidden">
-        {/* Top section */}        <div className="flex-1 flex items-center justify-center pt-1">
+      <Card className="flex flex-col bg-gray-800 border border-gray-700 h-auto min-h-[120px] w-full shadow-md overflow-hidden">
+        {/* Top section */}        <div className="flex-1 flex items-center justify-center pt-3">
           <div className={`w-12 h-12 rounded-full bg-gray-900/40 flex items-center justify-center shadow-inner transition-all duration-300 ${
             isTemperatureChanging ? 'bg-gray-800/60 scale-105' : ''
           }`}>
@@ -66,15 +65,15 @@ export function AmbientSensorCard({ sensor, isCelsius, onTargetTempChange, compa
         </div>
         
         {/* Label and Temperature */}
-        <div className="bg-gray-900/50 border-t border-gray-700/30 pt-1 pb-2">
+        <div className="bg-gray-900/50 border-t border-gray-700/30 pt-1 pb-3">
           <div className="text-sm font-semibold text-amber-500 text-center">
             Grill {sensor.id + 1}
           </div>
-          <div className="text-2xl font-bold text-white text-center">
+          <div className="text-2xl font-bold text-white text-center pb-1">
             <span className={`transition-all duration-300 ${
               isTemperatureChanging ? 'scale-110 text-amber-300' : ''
             }`}>
-              {currentTemp}°C
+              {formatTemp(currentTemp, isCelsius)}
             </span>
           </div>
         </div>
