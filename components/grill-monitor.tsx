@@ -112,12 +112,17 @@ export default function GrillMonitor() {
     }, 5000)
 
     return () => clearInterval(intervalId)
-  }, [])
-  // Check if session should start
+  }, [])  // Check if session should start
   useEffect(() => {
     if (!isSessionActive && sensors.length > 0) {
-      const meatSensors = sensors.filter((sensor) => sensor.id >= 2)
-      if (meatSensors.some((sensor) => sensor.currentTemp > 0)) {
+      // Start session when any sensor shows meaningful temperature (>30°C for ambient, >10°C for meat)
+      const ambientSensors = sensors.filter(sensor => sensor.id < 2)
+      const meatSensors = sensors.filter(sensor => sensor.id >= 2)
+      
+      const hasAmbientActivity = ambientSensors.some(sensor => sensor.currentTemp > 30)
+      const hasMeatActivity = meatSensors.some(sensor => sensor.currentTemp > 10)
+      
+      if (hasAmbientActivity || hasMeatActivity) {
         setIsSessionActive(true)
         const startTime = new Date()
         setSessionStartTime(startTime)
@@ -166,7 +171,6 @@ export default function GrillMonitor() {
     }
     setShowSessionRestore(false)
   }
-
   const handleClearSession = () => {
     setSelectedMeats({ 2: null, 3: null, 4: null, 5: null, 6: null })
     setSessionStartTime(null)
@@ -174,6 +178,26 @@ export default function GrillMonitor() {
     setSensors(DEFAULT_SENSORS)
     createNewSession()
     setShowSessionRestore(false)
+  }
+
+  const handleStartSession = () => {
+    if (!isSessionActive) {
+      setIsSessionActive(true)
+      const startTime = new Date()
+      setSessionStartTime(startTime)
+      startSession()
+    }
+  }
+
+  const handleResetSession = () => {
+    // Stop current session
+    setIsSessionActive(false)
+    setSessionStartTime(null)
+    // Clear all selections and reset sensors
+    setSelectedMeats({ 2: null, 3: null, 4: null, 5: null, 6: null })
+    setSensors(DEFAULT_SENSORS)
+    // Create new session
+    createNewSession()
   }
 
   if (isMobile) {
@@ -197,6 +221,8 @@ export default function GrillMonitor() {
         sessionStartTime={sessionStartTime} 
         isSessionActive={isSessionActive} 
         onClearSession={handleClearSession}
+        onStartSession={handleStartSession}
+        onResetSession={handleResetSession}
       />
 
       <div className="container mx-auto px-4 py-6">        {/* Status Cards Row */}
