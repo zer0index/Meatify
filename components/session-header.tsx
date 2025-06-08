@@ -6,9 +6,10 @@ import { Clock } from "lucide-react"
 interface SessionHeaderProps {
   sessionStartTime: Date | null
   isSessionActive: boolean
+  onClearSession?: () => void
 }
 
-export function SessionHeader({ sessionStartTime, isSessionActive }: SessionHeaderProps) {
+export function SessionHeader({ sessionStartTime, isSessionActive, onClearSession }: SessionHeaderProps) {
   const [elapsedTime, setElapsedTime] = useState("00:00:00")
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export function SessionHeader({ sessionStartTime, isSessionActive }: SessionHead
   return (
     <div className="w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-b border-gray-700/50 shadow-lg">
       <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-center md:justify-start">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Clock className="h-6 w-6 text-amber-500" />
             <div className="flex items-center gap-4">
@@ -55,6 +56,14 @@ export function SessionHeader({ sessionStartTime, isSessionActive }: SessionHead
               )}
             </div>
           </div>
+          {onClearSession && isSessionActive && (
+            <button
+              onClick={onClearSession}
+              className="px-3 py-1 text-sm bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-600/30 rounded-md transition-colors"
+            >
+              Clear Session
+            </button>
+          )}
         </div>
       </div>
     </div>

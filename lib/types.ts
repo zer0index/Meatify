@@ -37,3 +37,13 @@ export interface WeatherData {
     precipitationChance: number // percentage
   }>
 }
+
+export interface GrillSession {
+  id: string
+  startTime: Date | null
+  isActive: boolean
+  selectedMeats: Record<number, MeatType | null>
+  sensorTargets: Record<number, number>
+  temperatureHistory: Record<number, number[]>
+  lastSaved: Date
+}

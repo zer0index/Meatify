@@ -12,6 +12,16 @@ import { LiveHighlightsCard } from "@/components/live-highlights-card"
 import { WeatherWidget } from "@/components/weather-widget"
 import { fetchSensorData } from "@/lib/api"
 import type { Sensor, MeatType } from "@/lib/types"
+import { 
+  loadSession, 
+  createNewSession, 
+  updateSessionMeat, 
+  updateSessionTarget, 
+  updateSessionTemperatureHistory,
+  startSession,
+  getCurrentSession,
+  isSessionRecent
+} from "@/lib/dataStore"
 
 const DEFAULT_SENSORS: Sensor[] = Array.from({ length: 7 }, (_, i) => ({
   id: i,
@@ -34,12 +44,49 @@ export default function GrillMonitor() {
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null)
   const [isSessionActive, setIsSessionActive] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [showSessionRestore, setShowSessionRestore] = useState(false)
 
+  // Load saved session on component mount
+  useEffect(() => {
+    const savedSession = loadSession()
+    if (savedSession && isSessionRecent()) {
+      // Restore session state
+      setSelectedMeats(savedSession.selectedMeats)
+      setSessionStartTime(savedSession.startTime)
+      setIsSessionActive(savedSession.isActive)
+      
+      // Apply saved target temperatures to sensors
+      setSensors(prev => prev.map(sensor => ({
+        ...sensor,
+        targetTemp: savedSession.sensorTargets[sensor.id] || sensor.targetTemp
+      })))
+      
+      setShowSessionRestore(false)
+    } else if (savedSession) {
+      // Session exists but is older - show restore option
+      setShowSessionRestore(true)
+    } else {
+      // No saved session, create new one
+      createNewSession()
+    }
+  }, [])
   useEffect(() => {
     // Initial data fetch
     fetchSensorData().then((data) => {
       if (data.length > 0) {
-        setSensors(data)
+        setSensors(prevSensors => {
+          const updatedSensors = data.map(sensor => {
+            const prevSensor = prevSensors.find(s => s.id === sensor.id)
+            return {
+              ...sensor,
+              targetTemp: prevSensor?.targetTemp || sensor.targetTemp
+            }
+          })
+          
+          // Update temperature history in session
+          updateSessionTemperatureHistory(updatedSensors)
+          return updatedSensors
+        })
       }
     }).catch(console.error)
 
@@ -47,21 +94,35 @@ export default function GrillMonitor() {
     const intervalId = setInterval(() => {
       fetchSensorData().then((data) => {
         if (data.length > 0) {
-          setSensors(data)
+          setSensors(prevSensors => {
+            const updatedSensors = data.map(sensor => {
+              const prevSensor = prevSensors.find(s => s.id === sensor.id)
+              return {
+                ...sensor,
+                targetTemp: prevSensor?.targetTemp || sensor.targetTemp
+              }
+            })
+            
+            // Update temperature history in session
+            updateSessionTemperatureHistory(updatedSensors)
+            return updatedSensors
+          })
         }
       }).catch(console.error)
     }, 5000)
 
     return () => clearInterval(intervalId)
   }, [])
-
   // Check if session should start
   useEffect(() => {
     if (!isSessionActive && sensors.length > 0) {
       const meatSensors = sensors.filter((sensor) => sensor.id >= 2)
       if (meatSensors.some((sensor) => sensor.currentTemp > 0)) {
         setIsSessionActive(true)
-        setSessionStartTime(new Date())
+        const startTime = new Date()
+        setSessionStartTime(startTime)
+        // Update session in storage
+        startSession()
       }
     }
   }, [sensors, isSessionActive])
@@ -75,17 +136,44 @@ export default function GrillMonitor() {
 
   const ambientSensors = sensors.filter((sensor) => sensor.id < 2)
   const meatSensors = sensors.filter((sensor) => sensor.id >= 2)
-
   const handleMeatSelection = (sensorId: number, meat: MeatType) => {
     setSelectedMeats((prev) => ({
       ...prev,
       [sensorId]: meat,
     }))
     setShowMeatSelector(null)
+    // Save meat selection to session
+    updateSessionMeat(sensorId, meat)
   }
 
   const handleTargetTempChange = (sensorId: number, temp: number) => {
     setSensors((prev) => prev.map((sensor) => (sensor.id === sensorId ? { ...sensor, targetTemp: temp } : sensor)))
+    // Save target temperature to session
+    updateSessionTarget(sensorId, temp)
+  }
+
+  const handleRestoreSession = () => {
+    const savedSession = loadSession()
+    if (savedSession) {
+      setSelectedMeats(savedSession.selectedMeats)
+      setSessionStartTime(savedSession.startTime)
+      setIsSessionActive(savedSession.isActive)
+      
+      setSensors(prev => prev.map(sensor => ({
+        ...sensor,
+        targetTemp: savedSession.sensorTargets[sensor.id] || sensor.targetTemp
+      })))
+    }
+    setShowSessionRestore(false)
+  }
+
+  const handleClearSession = () => {
+    setSelectedMeats({ 2: null, 3: null, 4: null, 5: null, 6: null })
+    setSessionStartTime(null)
+    setIsSessionActive(false)
+    setSensors(DEFAULT_SENSORS)
+    createNewSession()
+    setShowSessionRestore(false)
   }
 
   if (isMobile) {
@@ -104,9 +192,12 @@ export default function GrillMonitor() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black">
-      {/* Session Timer Header */}
-      <SessionHeader sessionStartTime={sessionStartTime} isSessionActive={isSessionActive} />
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black">      {/* Session Timer Header */}
+      <SessionHeader 
+        sessionStartTime={sessionStartTime} 
+        isSessionActive={isSessionActive} 
+        onClearSession={handleClearSession}
+      />
 
       <div className="container mx-auto px-4 py-6">        {/* Status Cards Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-stretch">
@@ -148,13 +239,36 @@ export default function GrillMonitor() {
               />
             ))}
           </div>
-        </section>
-
-        {showMeatSelector !== null && (
+        </section>        {showMeatSelector !== null && (
           <MeatSelector
             onSelect={(meat) => handleMeatSelection(showMeatSelector, meat)}
             onClose={() => setShowMeatSelector(null)}
           />
+        )}
+
+        {showSessionRestore && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-6 rounded-lg border border-gray-600 max-w-md mx-4">
+              <h3 className="text-xl font-semibold text-amber-500 mb-4">Previous Session Found</h3>
+              <p className="text-gray-300 mb-6">
+                We found a previous grilling session. Would you like to restore your meat selections and temperature settings?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRestoreSession}
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-md transition-colors"
+                >
+                  Restore Session
+                </button>
+                <button
+                  onClick={handleClearSession}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors"
+                >
+                  Start Fresh
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
