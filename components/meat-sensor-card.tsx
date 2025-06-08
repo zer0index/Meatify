@@ -102,12 +102,11 @@ export function MeatSensorCard({
       if (temperatureToGo <= 5) return { text: "Almost Done", color: "bg-yellow-500" };
       return { text: "Cooking", color: "bg-amber-500" };
     };
-    
-    const status = getCookingStatus();
+      const status = getCookingStatus();
     
     // Calculate progress percentage for temperature bar
     const minTemp = 0; // Minimum temperature for display
-    const maxTemp = Math.max(targetTemp + 5, 90); // Maximum temperature (either target+5 or at least 90)
+    const maxTemp = Math.max(targetTemp, 50); // Use target temp or minimum of 50°C for display
     const progress = Math.max(0, Math.min(100, ((currentTemp - minTemp) / (maxTemp - minTemp)) * 100));
       return (      <Card className="flex flex-col bg-gray-800 border border-gray-700 w-full h-[170px] shadow-md overflow-hidden">
         {/* Header Section */}
