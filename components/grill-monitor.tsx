@@ -19,6 +19,7 @@ import {
   updateSessionTarget, 
   updateSessionTemperatureHistory,
   startSession,
+  clearSession,
   getCurrentSession,
   isSessionRecent
 } from "@/lib/dataStore"
@@ -45,34 +46,37 @@ export default function GrillMonitor() {
   const [isSessionActive, setIsSessionActive] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [showSessionRestore, setShowSessionRestore] = useState(false)
-
   // Load saved session on component mount
   useEffect(() => {
-    const savedSession = loadSession()
-    if (savedSession && isSessionRecent()) {
-      // Restore session state
-      setSelectedMeats(savedSession.selectedMeats)
-      setSessionStartTime(savedSession.startTime)
-      setIsSessionActive(savedSession.isActive)
-      
-      // Apply saved target temperatures to sensors
-      setSensors(prev => prev.map(sensor => ({
-        ...sensor,
-        targetTemp: savedSession.sensorTargets[sensor.id] || sensor.targetTemp
-      })))
-      
-      setShowSessionRestore(false)
-    } else if (savedSession) {
-      // Session exists but is older - show restore option
-      setShowSessionRestore(true)
-    } else {
-      // No saved session, create new one
-      createNewSession()
+    const loadSessionAsync = async () => {
+      const savedSession = await loadSession()
+      if (savedSession && isSessionRecent()) {
+        // Restore session state
+        setSelectedMeats(savedSession.selectedMeats)
+        setSessionStartTime(savedSession.startTime)
+        setIsSessionActive(savedSession.isActive)
+        
+        // Apply saved target temperatures to sensors
+        setSensors(prev => prev.map(sensor => ({
+          ...sensor,
+          targetTemp: savedSession.sensorTargets[sensor.id] || sensor.targetTemp
+        })))
+        
+        setShowSessionRestore(false)
+      } else if (savedSession) {
+        // Session exists but is older - show restore option
+        setShowSessionRestore(true)
+      } else {
+        // No saved session, create new one
+        createNewSession()
+      }
     }
+      loadSessionAsync()
   }, [])
+  
   useEffect(() => {
     // Initial data fetch
-    fetchSensorData().then((data) => {
+    fetchSensorData().then(async (data) => {
       if (data.length > 0) {
         setSensors(prevSensors => {
           const updatedSensors = data.map(sensor => {
@@ -92,7 +96,7 @@ export default function GrillMonitor() {
 
     // Set up polling for data updates
     const intervalId = setInterval(() => {
-      fetchSensorData().then((data) => {
+      fetchSensorData().then(async (data) => {
         if (data.length > 0) {
           setSensors(prevSensors => {
             const updatedSensors = data.map(sensor => {
@@ -107,12 +111,13 @@ export default function GrillMonitor() {
             updateSessionTemperatureHistory(updatedSensors)
             return updatedSensors
           })
-        }
-      }).catch(console.error)
+        }      }).catch(console.error)
     }, 5000)
 
     return () => clearInterval(intervalId)
-  }, [])  // Check if session should start
+  }, [])
+  
+  // Check if session should start
   useEffect(() => {
     if (!isSessionActive && sensors.length > 0) {
       // Start session when any sensor shows meaningful temperature (>30°C for ambient, >10°C for meat)
@@ -138,27 +143,26 @@ export default function GrillMonitor() {
     window.addEventListener("resize", check)
     return () => window.removeEventListener("resize", check)
   }, [])
-
   const ambientSensors = sensors.filter((sensor) => sensor.id < 2)
   const meatSensors = sensors.filter((sensor) => sensor.id >= 2)
-  const handleMeatSelection = (sensorId: number, meat: MeatType) => {
+  
+  const handleMeatSelection = async (sensorId: number, meat: MeatType) => {
     setSelectedMeats((prev) => ({
       ...prev,
       [sensorId]: meat,
     }))
     setShowMeatSelector(null)
     // Save meat selection to session
-    updateSessionMeat(sensorId, meat)
+    await updateSessionMeat(sensorId, meat)
   }
 
-  const handleTargetTempChange = (sensorId: number, temp: number) => {
+  const handleTargetTempChange = async (sensorId: number, temp: number) => {
     setSensors((prev) => prev.map((sensor) => (sensor.id === sensorId ? { ...sensor, targetTemp: temp } : sensor)))
     // Save target temperature to session
-    updateSessionTarget(sensorId, temp)
+    await updateSessionTarget(sensorId, temp)
   }
-
-  const handleRestoreSession = () => {
-    const savedSession = loadSession()
+  const handleRestoreSession = async () => {
+    const savedSession = await loadSession()
     if (savedSession) {
       setSelectedMeats(savedSession.selectedMeats)
       setSessionStartTime(savedSession.startTime)
@@ -171,21 +175,22 @@ export default function GrillMonitor() {
     }
     setShowSessionRestore(false)
   }
-  const handleClearSession = () => {
+  const handleClearSession = async () => {
     setSelectedMeats({ 2: null, 3: null, 4: null, 5: null, 6: null })
     setSessionStartTime(null)
     setIsSessionActive(false)
     setSensors(DEFAULT_SENSORS)
     createNewSession()
+    await clearSession()
     setShowSessionRestore(false)
   }
 
-  const handleStartSession = () => {
+  const handleStartSession = async () => {
     if (!isSessionActive) {
       setIsSessionActive(true)
       const startTime = new Date()
       setSessionStartTime(startTime)
-      startSession()
+      await startSession()
     }
   }
 

@@ -1,36 +1,138 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Meatify - Grill Temperature Monitoring System
 
-## Getting Started
+A modern BBQ/grill temperature monitoring application with session persistence and multi-device sharing capabilities.
 
-First, run the development server:
+## Features
 
+### 🌡️ Temperature Monitoring
+- Real-time monitoring of up to 7 temperature sensors
+- Ambient and meat temperature tracking
+- Customizable target temperatures
+- Temperature history tracking
+
+### 🥩 Meat Selection & Management
+- Visual meat selector with images
+- Preset target temperatures for different meat types
+- Per-sensor meat selection and tracking
+
+### 📱 Session Persistence
+- **Local Storage**: Automatic session saving with 24-hour retention
+- **File-Based Sharing**: Multi-device session synchronization
+- **Session Restore**: Recovery of interrupted cooking sessions
+- **Temperature History**: 100-reading history limit per sensor
+
+### 🔄 Multi-Device Sharing
+- **Docker Support**: Containerized deployment with persistent volumes
+- **Real-time Sync**: Automatic session synchronization every 5 seconds
+- **Conflict Resolution**: Intelligent session merging
+- **Device Identification**: Unique device tracking for session management
+
+### 📊 User Interface
+- Responsive design for mobile and desktop
+- Session timer with elapsed time tracking
+- Manual session controls (Start/Reset/Clear)
+- Live highlights and weather integration
+
+## Quick Start
+
+### Development Mode
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Docker Deployment (Recommended for Multi-Device)
+```bash
+# Build and run with persistent data
+docker-compose up -d
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# Or manual Docker run
+docker build -t meatify .
+docker run -d -p 3000:3000 -v $(pwd)/data:/app/data meatify
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Session Management
 
-## Learn More
+#### Local Development
+Sessions are automatically saved to localStorage with 24-hour retention.
 
-To learn more about Next.js, take a look at the following resources:
+#### Docker/Production
+Sessions are saved to `/app/data/sessions/current.json` with automatic backups and multi-device synchronization.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Session Storage
+- **Client-Side**: localStorage for immediate persistence
+- **Server-Side**: File-based storage for multi-device sharing
+- **Hybrid Approach**: Automatic fallback and synchronization
 
-## Deploy on Vercel
+### Session Data Structure
+```typescript
+interface GrillSession {
+  id: string
+  startTime: Date | null
+  isActive: boolean
+  selectedMeats: Record<number, MeatType | null>
+  sensorTargets: Record<number, number>
+  temperatureHistory: Record<number, number[]>
+  lastSaved: Date
+}
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Auto-Session Start
+Sessions automatically start when:
+- Ambient sensors > 30°C
+- Meat sensors > 10°C
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Configuration
+
+### Data Persistence
+- **Session Age**: 24 hours maximum
+- **History Limit**: 100 temperature readings per sensor
+- **Sync Interval**: 5 seconds for file-based storage
+- **Backup Location**: `/app/data/backups/`
+
+### Docker Volumes
+```yaml
+volumes:
+  - meatify_data:/app/data  # Persistent session storage
+```
+
+## API Endpoints
+
+- `GET /api/data` - Fetch current sensor data
+- `GET /api/health` - Health check endpoint
+
+## Development
+
+This project uses:
+- **Next.js 14** with App Router
+- **TypeScript** for type safety
+- **Tailwind CSS** for styling
+- **Docker** for containerization
+
+## Deployment
+
+### Docker Compose (Recommended)
+```bash
+git clone <repository>
+cd meatify
+docker-compose up -d
+```
+
+### Manual Docker
+```bash
+docker build -t meatify .
+docker run -d \
+  -p 3000:3000 \
+  -v $(pwd)/data:/app/data \
+  --name meatify \
+  meatify
+```
+
+### Vercel/Cloud
+The application can be deployed to any Node.js hosting platform. Note that file-based session sharing requires persistent storage.
+
+## License
+
+MIT License - see LICENSE file for details.

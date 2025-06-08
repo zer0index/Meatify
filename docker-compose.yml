@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  meatify:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount persistent data directory for session sharing
+      - meatify_data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  meatify_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
