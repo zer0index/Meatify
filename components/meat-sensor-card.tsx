@@ -109,21 +109,21 @@ export function MeatSensorCard({
     const minTemp = 0; // Minimum temperature for display
     const maxTemp = Math.max(targetTemp + 5, 90); // Maximum temperature (either target+5 or at least 90)
     const progress = Math.max(0, Math.min(100, ((currentTemp - minTemp) / (maxTemp - minTemp)) * 100));
-      return (
-      <Card className="flex flex-col bg-gray-800 border border-gray-700 w-full h-[170px] shadow-md overflow-hidden">
+      return (      <Card className="flex flex-col bg-gray-800 border border-gray-700 w-full h-[170px] shadow-md overflow-hidden">
         {/* Header Section */}
-        <div className="flex justify-between items-center px-3 pt-2.5 pb-1.5">
-          <div className="h-4"></div> {/* Empty spacer to balance the badge */}
+        <div className="flex justify-end items-center px-3 pt-2.5 pb-1">
           <div className={`text-xs font-medium text-white px-2 py-0.5 rounded-full shadow-sm transition-all duration-300 ${
             status.color} ${isTemperatureChanging ? 'scale-105' : ''}`}>
             {status.text}
           </div>
         </div>
         {/* Meat Name */}
-        <div className="text-sm font-semibold text-amber-500 text-center px-1.5 truncate">
-          <span className="transition-all duration-300 hover:underline cursor-pointer" onClick={onMeatSelectorClick}>
-            {meatInfo?.label || "Select Meat"}
-          </span>
+        <div className="bg-gray-700/50 py-1 mx-2 rounded-md mb-1">
+          <div className="text-sm font-medium text-white text-center px-1.5 truncate">
+            <span className="transition-all duration-300 hover:underline cursor-pointer" onClick={onMeatSelectorClick}>
+              {meatInfo?.label || "Select Meat"}
+            </span>
+          </div>
         </div>
           {/* Temperature Circle */}
         <div className="flex-1 flex items-center justify-center py-1">
@@ -152,10 +152,9 @@ export function MeatSensorCard({
                 strokeDashoffset={283 - (283 * progress) / 100}
                 strokeLinecap="round"
               />
-            </svg>
-            {/* Center with temperature value */}
+            </svg>            {/* Center with temperature value */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className={`text-3xl font-bold text-white transition-all duration-300 ${
+              <span className={`text-2xl font-bold text-white transition-all duration-300 ${
                 isTemperatureChanging ? 'scale-110 text-amber-300' : ''
               }`}>
                 {currentTemp}°
