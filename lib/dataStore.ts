@@ -353,6 +353,7 @@ export async function updateSessionTemperatureHistory(sensorData: Sensor[]): Pro
 
   const newHistory: Record<number, TemperatureReading[]> = { ...currentSession.temperatureHistory }
   const now = new Date()
+  let hasChanges = false
   
   sensorData.forEach(sensor => {
     if (!newHistory[sensor.id]) {
@@ -360,12 +361,23 @@ export async function updateSessionTemperatureHistory(sensorData: Sensor[]): Pro
     }
     
     // Add current temperature reading with timestamp
-    newHistory[sensor.id] = addTemperatureReading(
+    const updatedHistory = addTemperatureReading(
       newHistory[sensor.id], 
       sensor.currentTemp, 
       now
     )
+    
+    // Check if history actually changed (new reading was added)
+    if (updatedHistory.length !== newHistory[sensor.id].length) {
+      newHistory[sensor.id] = updatedHistory
+      hasChanges = true
+    }
   })
+
+  // Only save if there were actual changes to prevent excessive backups
+  if (!hasChanges) {
+    return true // No changes, but that's successful
+  }
 
   return await updateSession({ temperatureHistory: newHistory })
 }
@@ -541,13 +553,13 @@ export async function syncSession(): Promise<GrillSession | null> {
 
 // Helper function to merge two sessions intelligently
 function mergeSessions(local: GrillSession, remote: GrillSession): GrillSession {
-  console.log('Merging sessions - local lastSaved:', local.lastSaved, 'remote lastSaved:', remote.lastSaved)
+  // console.log('Merging sessions - local lastSaved:', local.lastSaved, 'remote lastSaved:', remote.lastSaved)
   
   // Use the session with the most recent lastSaved timestamp as base
   const base = local.lastSaved > remote.lastSaved ? local : remote
   const other = local.lastSaved > remote.lastSaved ? remote : local
   
-  console.log('Using base session from:', base === local ? 'local' : 'remote')
+  // console.log('Using base session from:', base === local ? 'local' : 'remote')
   
   // Merge temperature history using new timestamp-based approach
   const mergedHistory: Record<number, TemperatureReading[]> = {}
@@ -627,7 +639,7 @@ function mergeSessions(local: GrillSession, remote: GrillSession): GrillSession 
     lastSaved: new Date() // Always update to current time
   }
   
-  console.log('Merged session result:', mergedSession)
+  // console.log('Merged session result:', mergedSession)
   return mergedSession
 }
 
@@ -691,7 +703,7 @@ export function startAutoSync(): void {
   }
   
   autoSyncStarted = true
-  console.log('Starting auto-sync for multi-device session synchronization')
+  // console.log('Starting auto-sync for multi-device session synchronization')
   
   autoSyncInterval = setInterval(async () => {
     try {

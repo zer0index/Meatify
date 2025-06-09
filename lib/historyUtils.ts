@@ -115,6 +115,21 @@ export function addTemperatureReading(
     timestamp: ensureDate(reading.timestamp)
   }))
   
+  // Check for duplicate readings within the last 2 seconds to avoid spam
+  const recentCutoff = new Date(timestamp.getTime() - 2000) // 2 seconds ago
+  const recentReadings = normalizedHistory.filter(reading => 
+    ensureDate(reading.timestamp) >= recentCutoff
+  )
+  
+  // Don't add if we have the same temperature within the last 2 seconds
+  const hasDuplicate = recentReadings.some(reading => 
+    Math.abs(reading.temperature - temperature) < 0.1 // Within 0.1 degree
+  )
+  
+  if (hasDuplicate) {
+    return normalizedHistory // Return existing history without adding duplicate
+  }
+  
   const updated = [...normalizedHistory, newReading]
   
   // Sort by timestamp
