@@ -47,9 +47,11 @@ export default function GrillMonitor() {
   const [isSessionActive, setIsSessionActive] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [showSessionRestore, setShowSessionRestore] = useState(false)
-  // Load saved session on component mount
+  const [hasAttemptedRestore, setHasAttemptedRestore] = useState(false)
+    // Load saved session on component mount
   useEffect(() => {
     const loadSessionAsync = async () => {
+      setHasAttemptedRestore(true)
       const savedSession = await loadSession()
       if (savedSession && isSessionRecent()) {
         // Restore session state
@@ -116,12 +118,10 @@ export default function GrillMonitor() {
     }, 5000)
 
     return () => clearInterval(intervalId)
-  }, [])
-  
-  // Check if session should start
+  }, [])  // Check if session should start
   useEffect(() => {
-    if (!isSessionActive && sensors.length > 0) {
-      // Start session when any sensor shows meaningful temperature (>30°C for ambient, >10°C for meat)
+    if (!isSessionActive && sensors.length > 0 && !sessionStartTime && hasAttemptedRestore) {
+      // Only start a new session if we haven't restored one and restore attempt has completed
       const ambientSensors = sensors.filter(sensor => sensor.id < 2)
       const meatSensors = sensors.filter(sensor => sensor.id >= 2)
       
@@ -136,7 +136,7 @@ export default function GrillMonitor() {
         startSession()
       }
     }
-  }, [sensors, isSessionActive])
+  }, [sensors, hasAttemptedRestore, isSessionActive, sessionStartTime])
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640)

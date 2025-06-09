@@ -26,7 +26,7 @@ export default async function RootLayout({
   // Initialize storage on server startup
   if (typeof window === "undefined") {
     await initializeStorage();
-    startAutoSync();
+    // Auto-sync will be started by the client-side components
   }
 
   return (

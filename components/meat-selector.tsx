@@ -43,7 +43,7 @@ export function MeatSelector({ onSelect, onClose }: MeatSelectorProps) {
                     className="h-24 mb-2 rounded-md bg-center bg-cover"
                     style={{ backgroundImage: `url(${meatInfo.image})` }}
                   />
-                  <h3 className="text-center font-medium">{meatInfo.label}</h3>
+                  <h3 className="text-center font-medium text-white">{meatInfo.label}</h3>
                 </CardContent>
               </Card>
             )

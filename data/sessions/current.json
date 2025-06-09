@@ -1,0 +1,22 @@
+{
+  "id": "session_1749457454108_h4j2ui2u0",
+  "startTime": "2025-06-09T08:59:52.511Z",
+  "isActive": true,
+  "selectedMeats": {
+    "2": "beef_brisket",
+    "3": "pork_shoulder",
+    "4": "chicken_thigh",
+    "5": "pork_tenderloin",
+    "6": null
+  },
+  "sensorTargets": {
+    "2": 190,
+    "3": 145,
+    "4": 165
+  },
+  "temperatureHistory": {},
+  "lastSaved": "2025-06-09T08:59:52.650Z",
+  "deviceId": "server",
+  "lastSyncTime": "2025-06-09T08:59:52.653Z",
+  "version": 1
+}

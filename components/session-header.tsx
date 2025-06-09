@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Clock } from "lucide-react"
+import { Clock, Users } from "lucide-react"
+import { SyncStatus } from "./sync-status"
+import { useSession } from "@/lib/useSession"
 
 interface SessionHeaderProps {
   sessionStartTime: Date | null
@@ -19,6 +21,7 @@ export function SessionHeader({
   onResetSession 
 }: SessionHeaderProps) {
   const [elapsedTime, setElapsedTime] = useState("00:00:00")
+  const { isFromRemoteDevice } = useSession()
 
   useEffect(() => {
     if (!isSessionActive || !sessionStartTime) {
@@ -51,28 +54,36 @@ export function SessionHeader({
   return (
     <div className="w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-b border-gray-700/50 shadow-lg">
       <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between">          <div className="flex items-center gap-3">
             <Clock className="h-6 w-6 text-amber-500" />
             <div className="flex items-center gap-4">
-              <span className="text-lg font-semibold text-white">Cook Session —</span>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold text-white">Cook Session —</span>
+                {isFromRemoteDevice && (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-600/20 border border-blue-600/30 rounded-md">
+                    <Users className="w-3 h-3 text-blue-400" />
+                    <span className="text-xs text-blue-400">Multi-device</span>
+                  </div>
+                )}
+              </div>
               <span className="text-2xl font-bold font-mono text-amber-400 tracking-wider">{elapsedTime}</span>
               {sessionStartTime && (
                 <span className="text-sm text-gray-400 hidden sm:inline">
                   (Started at {formatStartTime(sessionStartTime)})
                 </span>
               )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {!isSessionActive && onStartSession && (
-              <button
-                onClick={onStartSession}
-                className="px-4 py-2 text-sm bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-600/30 rounded-md transition-colors font-medium"
-              >
-                Start Session
-              </button>
-            )}
+            </div>          </div>
+          <div className="flex items-center gap-3">
+            <SyncStatus />
+            <div className="flex items-center gap-2">
+              {!isSessionActive && onStartSession && (
+                <button
+                  onClick={onStartSession}
+                  className="px-4 py-2 text-sm bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-600/30 rounded-md transition-colors font-medium"
+                >
+                  Start Session
+                </button>
+                          )}
             {isSessionActive && onResetSession && (
               <button
                 onClick={onResetSession}
@@ -89,6 +100,7 @@ export function SessionHeader({
                 Clear Data
               </button>
             )}
+            </div>
           </div>
         </div>
       </div>

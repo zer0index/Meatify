@@ -1,0 +1,23 @@
+{
+  "session": {
+    "id": "session_1749456480788_8lgmbsl18",
+    "startTime": "2025-06-09T08:08:00.788Z",
+    "isActive": true,
+    "selectedMeats": {
+      "2": "beef_brisket",
+      "3": "chicken_breast",
+      "4": null,
+      "5": null,
+      "6": null
+    },
+    "sensorTargets": {
+      "2": 225,
+      "3": 165
+    },
+    "temperatureHistory": {
+      "2": [180, 185, 190, 195],
+      "3": [140, 145, 150, 155]
+    },
+    "lastSaved": "2025-06-09T08:09:00.000Z"
+  }
+}

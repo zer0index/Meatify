@@ -10,27 +10,19 @@ interface CookSessionPanelProps {
   sensors: Sensor[]
   selectedMeats: Record<number, MeatType | null>
   isCelsius: boolean
+  sessionStartTime: Date | null
+  isSessionActive: boolean
 }
 
-export function CookSessionPanel({ sensors, selectedMeats, isCelsius }: CookSessionPanelProps) {
-  const [sessionStarted, setSessionStarted] = useState(false)
-  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null)
+export function CookSessionPanel({ sensors, selectedMeats, isCelsius, sessionStartTime, isSessionActive }: CookSessionPanelProps) {
   const [elapsedTime, setElapsedTime] = useState("00:00:00")
 
-  // Check if any meat sensor has data to start the session
+  // Update timer every second using the global session timing
   useEffect(() => {
-    if (!sessionStarted && sensors.length > 0) {
-      const meatSensors = sensors.filter((sensor) => sensor.id >= 2)
-      if (meatSensors.some((sensor) => sensor.currentTemp > 0)) {
-        setSessionStarted(true)
-        setSessionStartTime(new Date())
-      }
+    if (!isSessionActive || !sessionStartTime) {
+      setElapsedTime("00:00:00")
+      return
     }
-  }, [sensors, sessionStarted])
-
-  // Update timer every second
-  useEffect(() => {
-    if (!sessionStarted || !sessionStartTime) return
 
     const intervalId = setInterval(() => {
       const now = new Date()
@@ -48,7 +40,7 @@ export function CookSessionPanel({ sensors, selectedMeats, isCelsius }: CookSess
     }, 1000)
 
     return () => clearInterval(intervalId)
-  }, [sessionStarted, sessionStartTime])
+  }, [isSessionActive, sessionStartTime])
 
   // Calculate session highlights
   const getSessionHighlights = () => {

@@ -6,8 +6,27 @@ let currentSession: GrillSession | null = null
 
 // File-based storage variables
 let lastFileSync = 0
-const SYNC_INTERVAL = 5000 // Sync every 5 seconds
+const SYNC_INTERVAL = 30000 // Sync every 30 seconds instead of 5 seconds
 let syncInProgress = false
+
+// Session change event system
+type SessionChangeListener = (session: GrillSession | null, source: 'local' | 'remote') => void
+const sessionChangeListeners: Set<SessionChangeListener> = new Set()
+
+export function addSessionChangeListener(listener: SessionChangeListener): () => void {
+  sessionChangeListeners.add(listener)
+  return () => sessionChangeListeners.delete(listener)
+}
+
+function notifySessionChange(session: GrillSession | null, source: 'local' | 'remote' = 'local') {
+  sessionChangeListeners.forEach(listener => {
+    try {
+      listener(session, source)
+    } catch (error) {
+      console.error('Session change listener error:', error)
+    }
+  })
+}
 
 // Existing sensor data functions
 export function setLatestSensorData(data: Sensor[]) {
@@ -106,17 +125,38 @@ export async function saveSession(session: GrillSession): Promise<boolean> {
       lastSaved: new Date()
     }
     
-    // Save to localStorage first (always available)
+    // Server-first approach: save to API if client-side
     if (typeof window !== 'undefined') {
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionToSave))
+      try {
+        const response = await fetch('/api/session', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session: sessionToSave })
+        })
+        
+        if (response.ok) {
+          // Also save to localStorage as backup
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionToSave))
+          currentSession = sessionToSave
+          notifySessionChange(sessionToSave, 'local')
+          return true
+        } else {
+          console.warn('Failed to save to server, using localStorage fallback')
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionToSave))
+        }
+      } catch (error) {
+        console.warn('Network error, using localStorage fallback:', error)
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionToSave))
+      }
     }
     
-    // Also save to file if on server
+    // Server-side: save to file directly
     if (isServer) {
       await saveSessionToFile(sessionToSave)
     }
     
     currentSession = sessionToSave
+    notifySessionChange(sessionToSave, 'local')
     return true
   } catch (error) {
     console.warn('Failed to save session:', error)
@@ -126,37 +166,69 @@ export async function saveSession(session: GrillSession): Promise<boolean> {
 
 export async function loadSession(): Promise<GrillSession | null> {
   try {
-    // Try to sync with file first if on server
+    // Server-first approach: try to fetch from API if client-side
+    if (typeof window !== 'undefined') {
+      try {
+        const response = await fetch('/api/session')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.session) {
+            // Convert date strings back to Date objects
+            const session: GrillSession = {
+              ...data.session,
+              startTime: data.session.startTime ? new Date(data.session.startTime) : null,
+              lastSaved: new Date(data.session.lastSaved)
+            }
+            
+            // Update localStorage cache
+            localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+            currentSession = session
+            
+            console.log('Session loaded from server:', session)
+            return session
+          }
+        } else if (response.status === 404) {
+          // No session found on server, this is normal for new installations
+          console.log('No session found on server')
+        } else {
+          console.warn('Failed to load from server:', response.status)
+        }
+      } catch (error) {
+        console.warn('Network error loading from server, trying localStorage:', error)
+      }
+      
+      // Fallback to localStorage
+      const saved = localStorage.getItem(SESSION_STORAGE_KEY)
+      if (saved) {
+        const session: GrillSession = JSON.parse(saved)
+        
+        // Check if session is too old
+        const sessionAge = Date.now() - new Date(session.lastSaved).getTime()
+        const maxAge = MAX_SESSION_AGE_HOURS * 60 * 60 * 1000
+        
+        if (sessionAge > maxAge) {
+          console.log('Session too old, clearing:', sessionAge / 1000 / 60, 'minutes')
+          await clearSession()
+          return null
+        }
+
+        // Convert date strings back to Date objects
+        session.startTime = session.startTime ? new Date(session.startTime) : null
+        session.lastSaved = new Date(session.lastSaved)
+        currentSession = session
+        
+        console.log('Session loaded from localStorage:', session)
+        return session
+      }
+    }
+    
+    // Server-side: load from file directly
     if (isServer) {
       const fileSession = await loadSessionFromFile()
       if (fileSession) {
         currentSession = fileSession
         return fileSession
       }
-    }
-    
-    // Fall back to localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(SESSION_STORAGE_KEY)
-      if (!saved) return null
-
-      const session: GrillSession = JSON.parse(saved)
-      
-      // Check if session is too old
-      const sessionAge = Date.now() - new Date(session.lastSaved).getTime()
-      const maxAge = MAX_SESSION_AGE_HOURS * 60 * 60 * 1000
-      
-      if (sessionAge > maxAge) {
-        await clearSession()
-        return null
-      }
-
-      // Convert date strings back to Date objects
-      session.startTime = session.startTime ? new Date(session.startTime) : null
-      session.lastSaved = new Date(session.lastSaved)
-      
-      currentSession = session
-      return session
     }
     
     return null
@@ -169,12 +241,31 @@ export async function loadSession(): Promise<GrillSession | null> {
 
 export async function clearSession(): Promise<void> {
   try {
-    // Clear from localStorage
+    // Server-first approach: clear from API if client-side
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(SESSION_STORAGE_KEY)
+      try {
+        const response = await fetch('/api/session', {
+          method: 'DELETE'
+        })
+        
+        if (response.ok) {
+          // Also clear localStorage
+          localStorage.removeItem(SESSION_STORAGE_KEY)
+          localStorage.removeItem('meatify-device-id') // Reset device ID too
+          currentSession = null
+          notifySessionChange(null, 'local')
+          return
+        } else {
+          console.warn('Failed to clear from server, clearing localStorage only')
+          localStorage.removeItem(SESSION_STORAGE_KEY)
+        }
+      } catch (error) {
+        console.warn('Network error clearing from server, clearing localStorage only:', error)
+        localStorage.removeItem(SESSION_STORAGE_KEY)
+      }
     }
     
-    // Clear from file if on server
+    // Server-side: clear from file directly
     if (isServer) {
       try {
         const fs = await import('fs/promises')
@@ -185,6 +276,7 @@ export async function clearSession(): Promise<void> {
     }
     
     currentSession = null
+    notifySessionChange(null, 'local')
   } catch (error) {
     console.warn('Failed to clear session:', error)
   }
@@ -192,7 +284,8 @@ export async function clearSession(): Promise<void> {
 
 export async function updateSession(updates: Partial<GrillSession>): Promise<boolean> {
   if (!currentSession) {
-    currentSession = createNewSession()
+    console.warn('No current session exists, cannot update. Load session first.')
+    return false
   }
   
   currentSession = {
@@ -204,7 +297,23 @@ export async function updateSession(updates: Partial<GrillSession>): Promise<boo
   return await saveSession(currentSession)
 }
 
+export async function ensureSessionExists(): Promise<GrillSession> {
+  if (!currentSession) {
+    // Try to load existing session first
+    const loadedSession = await loadSession()
+    if (loadedSession) {
+      return loadedSession
+    }
+    
+    // If no session exists, create a new one
+    currentSession = createNewSession()
+    await saveSession(currentSession)
+  }
+  return currentSession
+}
+
 export async function updateSessionMeat(sensorId: number, meat: MeatType | null): Promise<boolean> {
+  await ensureSessionExists()
   return await updateSession({
     selectedMeats: {
       ...currentSession?.selectedMeats || {},
@@ -214,6 +323,7 @@ export async function updateSessionMeat(sensorId: number, meat: MeatType | null)
 }
 
 export async function updateSessionTarget(sensorId: number, target: number): Promise<boolean> {
+  await ensureSessionExists()
   return await updateSession({
     sensorTargets: {
       ...currentSession?.sensorTargets || {},
@@ -245,6 +355,7 @@ export async function updateSessionTemperatureHistory(sensorData: Sensor[]): Pro
 }
 
 export async function startSession(): Promise<boolean> {
+  await ensureSessionExists()
   return await updateSession({
     startTime: new Date(),
     isActive: true
@@ -252,6 +363,7 @@ export async function startSession(): Promise<boolean> {
 }
 
 export async function stopSession(): Promise<boolean> {
+  await ensureSessionExists()
   return await updateSession({
     isActive: false
   })
@@ -341,7 +453,10 @@ export async function loadSessionFromFile(): Promise<GrillSession | null> {
 }
 
 export async function syncSession(): Promise<GrillSession | null> {
-  if (syncInProgress) return currentSession
+  if (syncInProgress) {
+    console.log('Sync already in progress, skipping')
+    return currentSession
+  }
   
   const now = Date.now()
   if (now - lastFileSync < SYNC_INTERVAL) {
@@ -365,11 +480,51 @@ export async function syncSession(): Promise<GrillSession | null> {
         return fileSession
       }
     } else {
-      // On client: send current session to server if needed
-      if (currentSession) {
-        // In a real implementation, this would make an API call to sync with server
-        // For now, we'll just save to localStorage
-        saveSession(currentSession)
+      // On client: check for updates from server
+      try {
+        const response = await fetch('/api/session')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.session) {
+            const serverSession: GrillSession = {
+              ...data.session,
+              startTime: data.session.startTime ? new Date(data.session.startTime) : null,
+              lastSaved: new Date(data.session.lastSaved)
+            }
+            
+            if (currentSession) {
+              // Check if server has newer data
+              if (serverSession.lastSaved > currentSession.lastSaved) {
+                console.log('Syncing newer session data from server - server:', serverSession.lastSaved, 'local:', currentSession.lastSaved)
+                // Merge server changes with local changes
+                const mergedSession = mergeSessions(currentSession, serverSession)
+                currentSession = mergedSession
+                
+                // Update localStorage cache
+                localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(mergedSession))
+                
+                // Notify components of remote session changes
+                notifySessionChange(mergedSession, 'remote')
+                return mergedSession
+              } else {
+                console.log('Local session is newer or equal, no sync needed')
+              }
+            } else {
+              // No local session, use server session
+              console.log('Loading session from server (no local session)')
+              currentSession = serverSession
+              localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(serverSession))
+              notifySessionChange(serverSession, 'remote')
+              return serverSession
+            }
+          } else {
+            console.log('No session data from server')
+          }
+        } else {
+          console.warn('Sync request failed:', response.status)
+        }
+      } catch (error) {
+        console.warn('Background sync failed:', error)
       }
     }
     
@@ -384,9 +539,13 @@ export async function syncSession(): Promise<GrillSession | null> {
 
 // Helper function to merge two sessions intelligently
 function mergeSessions(local: GrillSession, remote: GrillSession): GrillSession {
+  console.log('Merging sessions - local lastSaved:', local.lastSaved, 'remote lastSaved:', remote.lastSaved)
+  
   // Use the session with the most recent lastSaved timestamp as base
   const base = local.lastSaved > remote.lastSaved ? local : remote
   const other = local.lastSaved > remote.lastSaved ? remote : local
+  
+  console.log('Using base session from:', base === local ? 'local' : 'remote')
   
   // Merge temperature history by combining arrays and removing duplicates
   const mergedHistory: Record<number, number[]> = {}
@@ -405,18 +564,74 @@ function mergeSessions(local: GrillSession, remote: GrillSession): GrillSession 
     mergedHistory[sensorId] = combined.slice(-MAX_TEMPERATURE_HISTORY)
   }
   
-  return {
-    ...base,
-    temperatureHistory: mergedHistory,
-    lastSaved: new Date()
+  // Merge selected meats - be very conservative, prefer any non-null value
+  const mergedSelectedMeats: Record<number, MeatType | null> = {}
+  const allMeatSensorIds = new Set([
+    ...Object.keys(base.selectedMeats || {}),
+    ...Object.keys(other.selectedMeats || {})
+  ])
+  
+  for (const sensorIdStr of allMeatSensorIds) {
+    const sensorId = parseInt(sensorIdStr)
+    const baseMeat = base.selectedMeats?.[sensorId]
+    const otherMeat = other.selectedMeats?.[sensorId]
+    
+    // Prefer any non-null value to avoid losing meat selections
+    if (baseMeat !== null && baseMeat !== undefined) {
+      mergedSelectedMeats[sensorId] = baseMeat
+    } else if (otherMeat !== null && otherMeat !== undefined) {
+      mergedSelectedMeats[sensorId] = otherMeat
+    } else {
+      mergedSelectedMeats[sensorId] = null
+    }
+  }  
+  // Merge sensor targets - prefer any non-zero values
+  const mergedTargets: Record<number, number> = {}
+  const allTargetSensorIds = new Set([
+    ...Object.keys(base.sensorTargets || {}),
+    ...Object.keys(other.sensorTargets || {})
+  ])
+  
+  for (const sensorIdStr of allTargetSensorIds) {
+    const sensorId = parseInt(sensorIdStr)
+    const baseTarget = base.sensorTargets?.[sensorId]
+    const otherTarget = other.sensorTargets?.[sensorId]
+    
+    // Prefer any non-zero value to avoid losing target temperatures
+    if (baseTarget && baseTarget > 0) {
+      mergedTargets[sensorId] = baseTarget
+    } else if (otherTarget && otherTarget > 0) {
+      mergedTargets[sensorId] = otherTarget
+    } else {
+      mergedTargets[sensorId] = baseTarget || otherTarget || 0
+    }
   }
+
+  const mergedSession = {
+    ...base,
+    selectedMeats: mergedSelectedMeats,
+    sensorTargets: mergedTargets,
+    temperatureHistory: mergedHistory,
+    lastSaved: new Date() // Always update to current time
+  }
+  
+  console.log('Merged session result:', mergedSession)
+  return mergedSession
 }
 
 // Auto-sync mechanism
 let autoSyncInterval: NodeJS.Timeout | null = null
+let autoSyncStarted = false
 
 export function startAutoSync(): void {
-  if (autoSyncInterval) return
+  // Prevent multiple auto-sync processes
+  if (autoSyncInterval || autoSyncStarted) {
+    console.log('Auto-sync already running, skipping')
+    return
+  }
+  
+  autoSyncStarted = true
+  console.log('Starting auto-sync for multi-device session synchronization')
   
   autoSyncInterval = setInterval(async () => {
     try {
@@ -425,6 +640,13 @@ export function startAutoSync(): void {
       console.error('Auto-sync failed:', error)
     }
   }, SYNC_INTERVAL)
+  
+  // Also run an immediate sync after a delay to avoid conflicts with initial load
+  setTimeout(() => {
+    syncSession().catch(error => {
+      console.error('Initial sync failed:', error)
+    })
+  }, 2000) // Increased delay to avoid race conditions
 }
 
 export function stopAutoSync(): void {
@@ -432,6 +654,8 @@ export function stopAutoSync(): void {
     clearInterval(autoSyncInterval)
     autoSyncInterval = null
   }
+  autoSyncStarted = false
+  console.log('Auto-sync stopped')
 }
 
 // Utility functions

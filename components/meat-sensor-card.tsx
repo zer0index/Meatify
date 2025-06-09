@@ -284,7 +284,7 @@ export function MeatSensorCard({
                       type="number"
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
-                      className="w-16 h-7 text-sm"
+                      className="w-16 h-7 text-sm text-white"
                       autoFocus
                       onBlur={handleEditComplete}
                       onKeyDown={(e) => e.key === "Enter" && handleEditComplete()}

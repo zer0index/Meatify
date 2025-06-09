@@ -1,0 +1,11 @@
+{
+  "session": {
+    "id": "test_session_123",
+    "startTime": null,
+    "isActive": false,
+    "selectedMeats": {},
+    "sensorTargets": {},
+    "temperatureHistory": {},
+    "lastSaved": "2025-06-09T08:10:00.000Z"
+  }
+}
