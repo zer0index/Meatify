@@ -42,19 +42,54 @@ export function AmbientSensorCard({ sensor, isCelsius, onTargetTempChange, compa
     setInputValue(targetTemp.toString())
     setIsEditing(true)
   }
-
   const handleEditComplete = () => {
     const newTemp = Number.parseFloat(inputValue)
     if (!isNaN(newTemp)) {
       // Convert back to Celsius if needed for storage
       const tempInCelsius = isCelsius ? newTemp : convertTemp(newTemp, true)
-      onTargetTempChange(tempInCelsius)    }
+      onTargetTempChange(tempInCelsius)
+    }
     setIsEditing(false)
   }
     if (compact) {
+    // Calculate progress percentage for temperature bar with dynamic scaling
+    // For grill sensors, use realistic ambient starting temperature
+    const minTemp = 20; // Typical ambient temperature in Celsius
+    const maxTemp = targetTemp; // Use actual target temperature
+    
+    // Calculate progress as percentage towards target
+    let progress = 0;
+    if (maxTemp > minTemp) {
+      progress = Math.max(0, Math.min(100, ((currentTemp - minTemp) / (maxTemp - minTemp)) * 100));
+    }
+    
+    // Show minimal progress (5%) when heating has started but progress would be invisible
+    if (currentTemp > minTemp && progress < 5) {
+      progress = 5;
+    }
+    
+    // Cap progress at 100% when over target (will show as different color)
+    if (currentTemp > targetTemp) {
+      progress = 100;
+    }
+    
+    // Debug logging for Docker issue investigation
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+      console.log(`Grill Sensor ${sensor.id} progress calc:`, {
+        currentTemp,
+        targetTemp,
+        minTemp,
+        maxTemp,
+        calculatedProgress: maxTemp > minTemp ? ((currentTemp - minTemp) / (maxTemp - minTemp)) * 100 : 0,
+        finalProgress: progress,
+        isOverTemp
+      });
+    }
+    
     return (
       <Card className="flex flex-col bg-gray-800 border border-gray-700 h-auto min-h-[120px] w-full shadow-md overflow-hidden">
-        {/* Top section */}        <div className="flex-1 flex items-center justify-center pt-3">
+        {/* Top section */}
+        <div className="flex-1 flex items-center justify-center pt-3">
           <div className={`w-12 h-12 rounded-full bg-gray-900/40 flex items-center justify-center shadow-inner transition-all duration-300 ${
             isTemperatureChanging ? 'bg-gray-800/60 scale-105' : ''
           }`}>
@@ -75,6 +110,25 @@ export function AmbientSensorCard({ sensor, isCelsius, onTargetTempChange, compa
             }`}>
               {formatTemp(currentTemp, isCelsius)}
             </span>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="px-3 pb-1">
+            <div className="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-300 ${
+                  isOverTemp 
+                    ? 'bg-red-500' 
+                    : progress >= 80 
+                      ? 'bg-yellow-500' 
+                      : 'bg-amber-500'
+                }`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>{minTemp}°</span>
+              <span className="text-amber-400">Target: {formatTemp(targetTemp, isCelsius)}</span>
+            </div>
           </div>
         </div>
       </Card>

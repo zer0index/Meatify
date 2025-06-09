@@ -26,9 +26,10 @@ import {
 
 const DEFAULT_SENSORS: Sensor[] = Array.from({ length: 7 }, (_, i) => ({
   id: i,
-  currentTemp: 0,
+  // Provide realistic test values instead of all zeros
+  currentTemp: i < 2 ? 120 : (i === 2 ? 45 : i === 3 ? 35 : 25), // Grill sensors: 120°C, Meat sensors: varying temps
   targetTemp: i < 2 ? 180 : 70, // Default targets: 180°C for grill, 70°C for meat
-  history: Array(15).fill(0)
+  history: Array(15).fill(0).map((_, idx) => i < 2 ? 100 + idx * 2 : 20 + idx * 1.5) // Realistic history progression
 }))
 
 export default function GrillMonitor() {

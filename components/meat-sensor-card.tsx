@@ -102,12 +102,38 @@ export function MeatSensorCard({
       if (temperatureToGo <= 5) return { text: "Almost Done", color: "bg-yellow-500" };
       return { text: "Cooking", color: "bg-amber-500" };
     };
-      const status = getCookingStatus();
+      const status = getCookingStatus();    // Calculate progress percentage for temperature bar with dynamic scaling
+    // For meat sensors, use realistic starting temperature (refrigerator temp)
+    const minTemp = 4; // Refrigerator temperature in Celsius
+    const maxTemp = targetTemp; // Use actual target temperature
     
-    // Calculate progress percentage for temperature bar
-    const minTemp = 0; // Minimum temperature for display
-    const maxTemp = Math.max(targetTemp, 50); // Use target temp or minimum of 50°C for display
-    const progress = Math.max(0, Math.min(100, ((currentTemp - minTemp) / (maxTemp - minTemp)) * 100));
+    // Calculate progress as percentage towards target
+    let progress = 0;
+    if (maxTemp > minTemp) {
+      progress = Math.max(0, Math.min(100, ((currentTemp - minTemp) / (maxTemp - minTemp)) * 100));
+    }
+    
+    // Show minimal progress (5%) when heating has started but progress would be invisible
+    if (currentTemp > minTemp && progress < 5) {
+      progress = 5;
+    }
+    
+    // Cap progress at 100% when over target (will show as different color)
+    if (currentTemp > targetTemp) {
+      progress = 100;
+    }
+    
+    // Debug logging for Docker issue investigation
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+      console.log(`Sensor ${sensor.id} progress calc:`, {
+        currentTemp,
+        targetTemp,
+        minTemp,
+        maxTemp,
+        calculatedProgress: ((currentTemp - minTemp) / (maxTemp - minTemp)) * 100,
+        finalProgress: progress
+      });
+    }
       return (      <Card className="flex flex-col bg-gray-800 border border-gray-700 w-full h-[170px] shadow-md overflow-hidden">
         {/* Header Section */}
         <div className="flex justify-end items-center px-3 pt-2.5 pb-1">
@@ -172,8 +198,7 @@ export function MeatSensorCard({
               }`}
               style={{ width: `${progress}%` }}
             ></div>
-          </div>
-          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5 px-0.5">
+          </div>          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5 px-0.5">
             <span>{minTemp}°</span>
             <span>{maxTemp}°</span>
           </div>
