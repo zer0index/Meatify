@@ -5,17 +5,24 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Thermometer, Flame } from "lucide-react"
 import { TemperatureChart } from "@/components/temperature-chart"
-import type { Sensor } from "@/lib/types"
+import type { Sensor, TemperatureReading } from "@/lib/types"
 import { convertTemp, formatTemp } from "@/lib/utils"
 
 interface AmbientSensorCardProps {
   sensor: Sensor
+  sessionHistory?: TemperatureReading[] // Session temperature history for this sensor
   isCelsius: boolean
   onTargetTempChange: (temp: number) => void
   compact?: boolean // NEW: compact mode for mobile grid
 }
 
-export function AmbientSensorCard({ sensor, isCelsius, onTargetTempChange, compact = false }: AmbientSensorCardProps) {
+export function AmbientSensorCard({ 
+  sensor, 
+  sessionHistory = [],
+  isCelsius, 
+  onTargetTempChange, 
+  compact = false 
+}: AmbientSensorCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const currentTemp = isCelsius ? sensor.currentTemp : convertTemp(sensor.currentTemp, false)
@@ -188,7 +195,13 @@ export function AmbientSensorCard({ sensor, isCelsius, onTargetTempChange, compa
         </div>
 
         <div className="h-[100px]">
-          <TemperatureChart data={sensor.history} isCelsius={isCelsius} targetTemp={targetTemp} compact />
+          <TemperatureChart 
+            data={sensor.history} 
+            sessionHistory={sessionHistory}
+            isCelsius={isCelsius} 
+            targetTemp={targetTemp} 
+            compact 
+          />
         </div>
       </CardContent>
     </Card>

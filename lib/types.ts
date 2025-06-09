@@ -9,11 +9,16 @@ export type MeatType =
   | "chicken_thigh"
   | "lamb_chops"
 
+export interface TemperatureReading {
+  temperature: number
+  timestamp: Date
+}
+
 export interface Sensor {
   id: number
   currentTemp: number
   targetTemp: number
-  history: number[] // Array of past temperature readings
+  history: number[] // Array of past temperature readings from API (ephemeral)
 }
 
 export interface MeatInfo {
@@ -44,6 +49,6 @@ export interface GrillSession {
   isActive: boolean
   selectedMeats: Record<number, MeatType | null>
   sensorTargets: Record<number, number>
-  temperatureHistory: Record<number, number[]>
+  temperatureHistory: Record<number, TemperatureReading[]> // Persistent history with timestamps
   lastSaved: Date
 }

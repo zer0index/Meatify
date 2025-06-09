@@ -7,7 +7,7 @@ import { AmbientSensorCard } from "./ambient-sensor-card"
 import { LiveHighlightsCard } from "./live-highlights-card"
 import { WeatherWidget } from "./weather-widget"
 import { MeatSelector } from "./meat-selector"
-import type { Sensor, MeatType } from "@/lib/types"
+import type { Sensor, MeatType, TemperatureReading } from "@/lib/types"
 import { Home, History, Flame, Cloud, Bug } from "lucide-react"
 import { TemperatureChart } from "./temperature-chart"
 
@@ -21,6 +21,7 @@ const TABS = [
 
 interface MobileDashboardProps {
   sensors: Sensor[]
+  sessionHistory: Record<number, TemperatureReading[]>
   selectedMeats: Record<number, MeatType | null>
   isCelsius: boolean
   onMeatSelectorClick: (id: number) => void
@@ -89,10 +90,10 @@ export default function MobileDashboard(props: MobileDashboardProps) {
                 key={sensor.id}
                 onClick={() => setExpandedSensor(sensor.id)}
                 className="transform transition-transform active:scale-95"
-              >
-                <MeatSensorCard
+              >                <MeatSensorCard
                   sensor={sensor}
                   selectedMeat={props.selectedMeats[sensor.id]}
+                  sessionHistory={props.sessionHistory[sensor.id] || []}
                   isCelsius={props.isCelsius}
                   onMeatSelectorClick={() => props.onMeatSelectorClick(sensor.id)}
                   onTargetTempChange={(temp) => props.onTargetTempChange(sensor.id, temp)}
@@ -110,9 +111,9 @@ export default function MobileDashboard(props: MobileDashboardProps) {
         <div className="pb-3 px-1">
           <div className="flex gap-3 w-full">
             {ambientSensors.map((sensor) => (
-              <div key={sensor.id} className="flex-1 min-w-0">
-                <AmbientSensorCard
+              <div key={sensor.id} className="flex-1 min-w-0">                <AmbientSensorCard
                   sensor={sensor}
+                  sessionHistory={props.sessionHistory[sensor.id] || []}
                   isCelsius={props.isCelsius}
                   onTargetTempChange={(temp) => props.onTargetTempChange(sensor.id, temp)}
                   compact={true}
@@ -138,10 +139,10 @@ export default function MobileDashboard(props: MobileDashboardProps) {
               aria-label="Close"
             >
               ×
-            </button>
-            <MeatSensorCard
+            </button>            <MeatSensorCard
               sensor={meatSensors.find((s) => s.id === expandedSensor)!}
               selectedMeat={props.selectedMeats[expandedSensor]}
+              sessionHistory={props.sessionHistory[expandedSensor] || []}
               isCelsius={props.isCelsius}
               onMeatSelectorClick={() => props.onMeatSelectorClick(expandedSensor)}
               onTargetTempChange={(temp) => props.onTargetTempChange(expandedSensor, temp)}
@@ -171,7 +172,6 @@ export default function MobileDashboard(props: MobileDashboardProps) {
       </div>
     </div>
   )
-
   // History Tab
   const renderHistory = () => (
     <div className="p-2 h-full w-full overflow-y-auto flex flex-col gap-4">
@@ -186,6 +186,7 @@ export default function MobileDashboard(props: MobileDashboardProps) {
             <div className="bg-gray-900 rounded-lg p-2 w-full">
               <TemperatureChart
                 data={sensor.history}
+                sessionHistory={props.sessionHistory[sensor.id] || []}
                 isCelsius={props.isCelsius}
                 targetTemp={sensor.targetTemp}
                 compact={false}
@@ -201,6 +202,7 @@ export default function MobileDashboard(props: MobileDashboardProps) {
           <div className="bg-gray-900 rounded-lg p-2 w-full">
             <TemperatureChart
               data={sensor.history}
+              sessionHistory={props.sessionHistory[sensor.id] || []}
               isCelsius={props.isCelsius}
               targetTemp={sensor.targetTemp}
               compact={false}

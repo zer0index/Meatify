@@ -11,7 +11,8 @@ import { SessionHeader } from "@/components/session-header"
 import { LiveHighlightsCard } from "@/components/live-highlights-card"
 import { WeatherWidget } from "@/components/weather-widget"
 import { fetchSensorData } from "@/lib/api"
-import type { Sensor, MeatType } from "@/lib/types"
+import type { Sensor, MeatType, TemperatureReading } from "@/lib/types"
+import { createMockSensorsWithHistory } from "@/lib/historyUtils"
 import { 
   loadSession, 
   createNewSession, 
@@ -21,19 +22,16 @@ import {
   startSession,
   clearSession,
   getCurrentSession,
-  isSessionRecent
+  isSessionRecent,
+  addSessionChangeListener
 } from "@/lib/dataStore"
 
-const DEFAULT_SENSORS: Sensor[] = Array.from({ length: 7 }, (_, i) => ({
-  id: i,
-  // Provide realistic test values instead of all zeros
-  currentTemp: i < 2 ? 120 : (i === 2 ? 45 : i === 3 ? 35 : 25), // Grill sensors: 120°C, Meat sensors: varying temps
-  targetTemp: i < 2 ? 180 : 70, // Default targets: 180°C for grill, 70°C for meat
-  history: Array(15).fill(0).map((_, idx) => i < 2 ? 100 + idx * 2 : 20 + idx * 1.5) // Realistic history progression
-}))
+const DEFAULT_SENSORS: Sensor[] = createMockSensorsWithHistory()
 
 export default function GrillMonitor() {
-  const [sensors, setSensors] = useState<Sensor[]>(DEFAULT_SENSORS)
+  const [mounted, setMounted] = useState(false)
+  const [sensors, setSensors] = useState<Sensor[]>([])
+  const [sessionHistory, setSessionHistory] = useState<Record<number, TemperatureReading[]>>({})
   const [selectedMeats, setSelectedMeats] = useState<Record<number, MeatType | null>>({
     2: null,
     3: null,
@@ -48,6 +46,13 @@ export default function GrillMonitor() {
   const [isMobile, setIsMobile] = useState(false)
   const [showSessionRestore, setShowSessionRestore] = useState(false)
   const [hasAttemptedRestore, setHasAttemptedRestore] = useState(false)
+
+  // Set mounted to true after component mounts to prevent hydration mismatches
+  useEffect(() => {
+    setMounted(true)
+    // Initialize with mock data only on client
+    setSensors(DEFAULT_SENSORS)
+  }, [])
     // Load saved session on component mount
   useEffect(() => {
     const loadSessionAsync = async () => {
@@ -58,6 +63,7 @@ export default function GrillMonitor() {
         setSelectedMeats(savedSession.selectedMeats)
         setSessionStartTime(savedSession.startTime)
         setIsSessionActive(savedSession.isActive)
+        setSessionHistory(savedSession.temperatureHistory)
         
         // Apply saved target temperatures to sensors
         setSensors(prev => prev.map(sensor => ({
@@ -69,6 +75,7 @@ export default function GrillMonitor() {
       } else if (savedSession) {
         // Session exists but is older - show restore option
         setShowSessionRestore(true)
+        setSessionHistory(savedSession.temperatureHistory)
       } else {
         // No saved session, create new one
         createNewSession()
@@ -137,16 +144,14 @@ export default function GrillMonitor() {
       }
     }
   }, [sensors, hasAttemptedRestore, isSessionActive, sessionStartTime])
-
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640)
     check()
     window.addEventListener("resize", check)
     return () => window.removeEventListener("resize", check)
   }, [])
-  const ambientSensors = sensors.filter((sensor) => sensor.id < 2)
-  const meatSensors = sensors.filter((sensor) => sensor.id >= 2)
-  
+
+  // Handler functions
   const handleMeatSelection = async (sensorId: number, meat: MeatType) => {
     setSelectedMeats((prev) => ({
       ...prev,
@@ -206,10 +211,42 @@ export default function GrillMonitor() {
     createNewSession()
   }
 
-  if (isMobile) {
+  // Session change listener to update history when session syncs
+  useEffect(() => {
+    const unsubscribe = addSessionChangeListener((session, source) => {
+      if (session) {
+        setSessionHistory(session.temperatureHistory)
+        if (source === 'remote') {
+          console.log('Session history updated from remote device')
+        }
+      }
+    })
+      return unsubscribe
+  }, [])
+
+  // Don't render until mounted to prevent hydration mismatches
+  if (!mounted) {
     return (
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+              <p className="text-gray-400">Loading grill monitor...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const ambientSensors = sensors.filter((sensor) => sensor.id < 2)
+  const meatSensors = sensors.filter((sensor) => sensor.id >= 2)
+
+  if (isMobile) {return (
       <MobileDashboard
         sensors={sensors}
+        sessionHistory={sessionHistory}
         selectedMeats={selectedMeats}
         isCelsius={isCelsius}
         onMeatSelectorClick={setShowMeatSelector}
@@ -244,12 +281,12 @@ export default function GrillMonitor() {
         {/* Meat Temperatures Section */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-4 text-amber-500">Meat Temperatures</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-            {meatSensors.map((sensor) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">            {meatSensors.map((sensor) => (
               <MeatSensorCard
                 key={sensor.id}
                 sensor={sensor}
                 selectedMeat={selectedMeats[sensor.id]}
+                sessionHistory={sessionHistory[sensor.id]}
                 isCelsius={isCelsius}
                 onMeatSelectorClick={() => setShowMeatSelector(sensor.id)}
                 onTargetTempChange={(temp) => handleTargetTempChange(sensor.id, temp)}
@@ -261,11 +298,11 @@ export default function GrillMonitor() {
         {/* Grill Temperature Section */}
         <section>
           <h2 className="text-lg font-semibold mb-3 text-amber-500">Grill Temperature</h2>
-          <div className="grid grid-cols-2 gap-6">
-            {ambientSensors.map((sensor) => (
+          <div className="grid grid-cols-2 gap-6">            {ambientSensors.map((sensor) => (
               <AmbientSensorCard
                 key={sensor.id}
                 sensor={sensor}
+                sessionHistory={sessionHistory[sensor.id]}
                 isCelsius={isCelsius}
                 onTargetTempChange={(temp) => handleTargetTempChange(sensor.id, temp)}
               />

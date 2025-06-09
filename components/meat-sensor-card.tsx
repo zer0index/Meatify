@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Thermometer, AlertCircle } from "lucide-react"
 import { TemperatureChart } from "@/components/temperature-chart"
-import type { Sensor, MeatType } from "@/lib/types"
+import type { Sensor, MeatType, TemperatureReading } from "@/lib/types"
 import { convertTemp, formatTemp, getMeatInfo } from "@/lib/utils"
 import Image from "next/image"
 
 interface MeatSensorCardProps {
   sensor: Sensor
   selectedMeat: MeatType | null
+  sessionHistory?: TemperatureReading[] // Session temperature history for this sensor
   isCelsius: boolean
   onMeatSelectorClick: () => void
   onTargetTempChange: (temp: number) => void
@@ -22,11 +23,12 @@ interface MeatSensorCardProps {
 export function MeatSensorCard({
   sensor,
   selectedMeat,
+  sessionHistory = [],
   isCelsius,
   onMeatSelectorClick,
   onTargetTempChange,
   compact = false,
-}: MeatSensorCardProps) {  
+}: MeatSensorCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [inputValue, setInputValue] = useState("")
 
@@ -302,7 +304,13 @@ export function MeatSensorCard({
             </div>
 
             <div className="h-[80px]">
-              <TemperatureChart data={sensor.history} isCelsius={isCelsius} targetTemp={targetTemp} compact />
+              <TemperatureChart 
+                data={sensor.history} 
+                sessionHistory={sessionHistory}
+                isCelsius={isCelsius} 
+                targetTemp={targetTemp} 
+                compact 
+              />
             </div>
           </>
         ) : (

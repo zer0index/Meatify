@@ -1,4 +1,5 @@
-import type { Sensor, GrillSession, MeatType } from "./types"
+import type { Sensor, GrillSession, MeatType, TemperatureReading } from "./types"
+import { addTemperatureReading, convertLegacyHistory, mergeMultiDeviceHistory } from "./historyUtils"
 
 let latestSensorData: Sensor[] | null = null
 let lastPostTimestamp: string | null = null
@@ -16,6 +17,15 @@ const sessionChangeListeners: Set<SessionChangeListener> = new Set()
 export function addSessionChangeListener(listener: SessionChangeListener): () => void {
   sessionChangeListeners.add(listener)
   return () => sessionChangeListeners.delete(listener)
+}
+
+// Helper function to dispatch sync events asynchronously to avoid React state update warnings
+function dispatchSyncEvent(eventType: 'meatify-sync-start' | 'meatify-sync-end') {
+  if (typeof window !== 'undefined') {
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(eventType))
+    }, 0)
+  }
 }
 
 function notifySessionChange(session: GrillSession | null, source: 'local' | 'remote' = 'local') {
@@ -123,30 +133,34 @@ export async function saveSession(session: GrillSession): Promise<boolean> {
     const sessionToSave = {
       ...session,
       lastSaved: new Date()
-    }
-    
-    // Server-first approach: save to API if client-side
+    }    // Server-first approach: save to API if client-side
     if (typeof window !== 'undefined') {
       try {
+        // Dispatch sync start event asynchronously to avoid React state update warnings
+        dispatchSyncEvent('meatify-sync-start')
+        
         const response = await fetch('/api/session', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session: sessionToSave })
         })
         
-        if (response.ok) {
-          // Also save to localStorage as backup
+        if (response.ok) {          // Also save to localStorage as backup
           localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionToSave))
           currentSession = sessionToSave
           notifySessionChange(sessionToSave, 'local')
-          return true
-        } else {
+          // Dispatch sync end event
+          dispatchSyncEvent('meatify-sync-end')
+          return true        } else {
           console.warn('Failed to save to server, using localStorage fallback')
           localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionToSave))
-        }
-      } catch (error) {
+          // Dispatch sync end event
+          dispatchSyncEvent('meatify-sync-end')
+        }      } catch (error) {
         console.warn('Network error, using localStorage fallback:', error)
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionToSave))
+        // Dispatch sync end event
+        dispatchSyncEvent('meatify-sync-end')
       }
     }
     
@@ -158,32 +172,33 @@ export async function saveSession(session: GrillSession): Promise<boolean> {
     currentSession = sessionToSave
     notifySessionChange(sessionToSave, 'local')
     return true
-  } catch (error) {
-    console.warn('Failed to save session:', error)
+  } catch (error) {    console.warn('Failed to save session:', error)
+    // Dispatch sync end event on error
+    dispatchSyncEvent('meatify-sync-end')
     return false
   }
 }
 
 export async function loadSession(): Promise<GrillSession | null> {
-  try {
-    // Server-first approach: try to fetch from API if client-side
+  try {    // Server-first approach: try to fetch from API if client-side
     if (typeof window !== 'undefined') {
       try {
+        // Dispatch sync start event asynchronously to avoid React state update warnings
+        dispatchSyncEvent('meatify-sync-start')
+        
         const response = await fetch('/api/session')
+        
         if (response.ok) {
           const data = await response.json()
           if (data.session) {
-            // Convert date strings back to Date objects
-            const session: GrillSession = {
-              ...data.session,
-              startTime: data.session.startTime ? new Date(data.session.startTime) : null,
-              lastSaved: new Date(data.session.lastSaved)
-            }
-            
-            // Update localStorage cache
+            // Migrate and convert date strings back to Date objects
+            const session = migrateSessionData(data.session)
+              // Update localStorage cache
             localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
             currentSession = session
             
+            // Dispatch sync end event
+            dispatchSyncEvent('meatify-sync-end')
             console.log('Session loaded from server:', session)
             return session
           }
@@ -191,19 +206,21 @@ export async function loadSession(): Promise<GrillSession | null> {
           // No session found on server, this is normal for new installations
           console.log('No session found on server')
         } else {
-          console.warn('Failed to load from server:', response.status)
-        }
-      } catch (error) {
-        console.warn('Network error loading from server, trying localStorage:', error)
+          console.warn('Failed to load from server:', response.status)        }
+        
+        // Dispatch sync end event
+        dispatchSyncEvent('meatify-sync-end')
+      } catch (error) {        console.warn('Network error loading from server, trying localStorage:', error)
+        // Dispatch sync end event on error
+        dispatchSyncEvent('meatify-sync-end')
       }
-      
-      // Fallback to localStorage
+        // Fallback to localStorage
       const saved = localStorage.getItem(SESSION_STORAGE_KEY)
       if (saved) {
-        const session: GrillSession = JSON.parse(saved)
+        const rawSession = JSON.parse(saved)
         
         // Check if session is too old
-        const sessionAge = Date.now() - new Date(session.lastSaved).getTime()
+        const sessionAge = Date.now() - new Date(rawSession.lastSaved).getTime()
         const maxAge = MAX_SESSION_AGE_HOURS * 60 * 60 * 1000
         
         if (sessionAge > maxAge) {
@@ -212,9 +229,8 @@ export async function loadSession(): Promise<GrillSession | null> {
           return null
         }
 
-        // Convert date strings back to Date objects
-        session.startTime = session.startTime ? new Date(session.startTime) : null
-        session.lastSaved = new Date(session.lastSaved)
+        // Migrate and convert date strings back to Date objects
+        const session = migrateSessionData(rawSession)
         currentSession = session
         
         console.log('Session loaded from localStorage:', session)
@@ -335,20 +351,20 @@ export async function updateSessionTarget(sensorId: number, target: number): Pro
 export async function updateSessionTemperatureHistory(sensorData: Sensor[]): Promise<boolean> {
   if (!currentSession) return false
 
-  const newHistory: Record<number, number[]> = { ...currentSession.temperatureHistory }
+  const newHistory: Record<number, TemperatureReading[]> = { ...currentSession.temperatureHistory }
+  const now = new Date()
   
   sensorData.forEach(sensor => {
     if (!newHistory[sensor.id]) {
       newHistory[sensor.id] = []
     }
     
-    // Add current temperature to history
-    newHistory[sensor.id].push(sensor.currentTemp)
-    
-    // Limit history length
-    if (newHistory[sensor.id].length > MAX_TEMPERATURE_HISTORY) {
-      newHistory[sensor.id] = newHistory[sensor.id].slice(-MAX_TEMPERATURE_HISTORY)
-    }
+    // Add current temperature reading with timestamp
+    newHistory[sensor.id] = addTemperatureReading(
+      newHistory[sensor.id], 
+      sensor.currentTemp, 
+      now
+    )
   })
 
   return await updateSession({ temperatureHistory: newHistory })
@@ -423,17 +439,8 @@ export async function loadSessionFromFile(): Promise<GrillSession | null> {
     const fs = await import('fs/promises')
     const data = await fs.readFile(CURRENT_SESSION_FILE, 'utf-8')
     const sessionWithMetadata = JSON.parse(data)
-    
-    // Remove metadata and convert dates
-    const session: GrillSession = {
-      id: sessionWithMetadata.id,
-      startTime: sessionWithMetadata.startTime ? new Date(sessionWithMetadata.startTime) : null,
-      isActive: sessionWithMetadata.isActive,
-      selectedMeats: sessionWithMetadata.selectedMeats,
-      sensorTargets: sessionWithMetadata.sensorTargets,
-      temperatureHistory: sessionWithMetadata.temperatureHistory,
-      lastSaved: new Date(sessionWithMetadata.lastSaved)
-    }
+      // Remove metadata and migrate/convert data
+    const session = migrateSessionData(sessionWithMetadata)
     
     // Check if session is too old
     const sessionAge = Date.now() - session.lastSaved.getTime()
@@ -478,19 +485,14 @@ export async function syncSession(): Promise<GrillSession | null> {
       } else if (fileSession) {
         currentSession = fileSession
         return fileSession
-      }
-    } else {
+      }    } else {
       // On client: check for updates from server
       try {
         const response = await fetch('/api/session')
         if (response.ok) {
           const data = await response.json()
           if (data.session) {
-            const serverSession: GrillSession = {
-              ...data.session,
-              startTime: data.session.startTime ? new Date(data.session.startTime) : null,
-              lastSaved: new Date(data.session.lastSaved)
-            }
+            const serverSession = migrateSessionData(data.session)
             
             if (currentSession) {
               // Check if server has newer data
@@ -547,8 +549,8 @@ function mergeSessions(local: GrillSession, remote: GrillSession): GrillSession 
   
   console.log('Using base session from:', base === local ? 'local' : 'remote')
   
-  // Merge temperature history by combining arrays and removing duplicates
-  const mergedHistory: Record<number, number[]> = {}
+  // Merge temperature history using new timestamp-based approach
+  const mergedHistory: Record<number, TemperatureReading[]> = {}
   const allSensorIds = new Set([
     ...Object.keys(base.temperatureHistory || {}),
     ...Object.keys(other.temperatureHistory || {})
@@ -556,12 +558,22 @@ function mergeSessions(local: GrillSession, remote: GrillSession): GrillSession 
   
   for (const sensorIdStr of allSensorIds) {
     const sensorId = parseInt(sensorIdStr)
-    const baseHistory = base.temperatureHistory?.[sensorId] || []
-    const otherHistory = other.temperatureHistory?.[sensorId] || []
+    let baseHistory = base.temperatureHistory?.[sensorId] || []
+    let otherHistory = other.temperatureHistory?.[sensorId] || []
     
-    // Combine and limit history
-    const combined = [...new Set([...baseHistory, ...otherHistory])]
-    mergedHistory[sensorId] = combined.slice(-MAX_TEMPERATURE_HISTORY)
+    // Handle migration from legacy number[] format
+    if (baseHistory.length > 0 && typeof baseHistory[0] === 'number') {
+      baseHistory = convertLegacyHistory(baseHistory as any, new Date())
+    }
+    if (otherHistory.length > 0 && typeof otherHistory[0] === 'number') {
+      otherHistory = convertLegacyHistory(otherHistory as any, new Date())
+    }
+    
+    // Merge using proper timestamp-based logic
+    mergedHistory[sensorId] = mergeMultiDeviceHistory(
+      baseHistory as TemperatureReading[], 
+      otherHistory as TemperatureReading[]
+    )
   }
   
   // Merge selected meats - be very conservative, prefer any non-null value
@@ -617,6 +629,54 @@ function mergeSessions(local: GrillSession, remote: GrillSession): GrillSession 
   
   console.log('Merged session result:', mergedSession)
   return mergedSession
+}
+
+// Migration function for legacy session data
+function migrateSessionData(session: any): GrillSession {
+  // Convert legacy number[] temperature history to TemperatureReading[]
+  const migratedHistory: Record<number, TemperatureReading[]> = {}
+  
+  if (session.temperatureHistory) {
+    for (const [sensorIdStr, history] of Object.entries(session.temperatureHistory)) {
+      const sensorId = parseInt(sensorIdStr)
+      if (Array.isArray(history)) {
+        if (history.length > 0 && typeof history[0] === 'number') {
+          // Legacy format - convert to new format
+          migratedHistory[sensorId] = convertLegacyHistory(history, new Date())
+        } else {
+          // New format but may need timestamp conversion
+          migratedHistory[sensorId] = (history as any[]).map((reading: any) => {
+            let timestamp: Date
+            
+            // Handle various timestamp formats
+            if (reading.timestamp instanceof Date) {
+              timestamp = reading.timestamp
+            } else if (typeof reading.timestamp === 'string') {
+              timestamp = new Date(reading.timestamp)
+            } else if (typeof reading.timestamp === 'number') {
+              timestamp = new Date(reading.timestamp)
+            } else {
+              // Fallback to current time if timestamp is invalid
+              console.warn('Invalid timestamp format in reading:', reading)
+              timestamp = new Date()
+            }
+            
+            return {
+              temperature: reading.temperature || 0,
+              timestamp
+            }
+          })
+        }
+      }
+    }
+  }
+  
+  return {
+    ...session,
+    temperatureHistory: migratedHistory,
+    startTime: session.startTime ? new Date(session.startTime) : null,
+    lastSaved: new Date(session.lastSaved)
+  }
 }
 
 // Auto-sync mechanism

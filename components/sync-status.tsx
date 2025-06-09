@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
+import { addSessionChangeListener } from '@/lib/dataStore'
 
 interface SyncStatusProps {
   className?: string
@@ -22,29 +23,32 @@ export function SyncStatus({ className = "" }: SyncStatusProps) {
     
     setIsOnline(navigator.onLine)
 
-    // Monitor sync activity by intercepting fetch calls to /api/session
-    const originalFetch = window.fetch
-    window.fetch = async (...args) => {
-      const [url] = args
-      if (url === '/api/session') {
-        setIsSyncing(true)
-        try {
-          const response = await originalFetch(...args)
-          if (response.ok) {
-            setLastSync(new Date())
-          }
-          return response
-        } finally {
-          setIsSyncing(false)
-        }
+    // Listen to session changes instead of intercepting fetch
+    const unsubscribe = addSessionChangeListener((session, source) => {
+      if (session && session.lastSaved) {
+        setLastSync(new Date(session.lastSaved))
       }
-      return originalFetch(...args)
-    }
+      setIsSyncing(false)
+    })
+
+    // Monitor sync activity by listening to fetch events
+    const handleBeforeUnload = () => setIsSyncing(true)
+    
+    // Use a custom event system instead of intercepting fetch
+    const handleSyncStart = () => setIsSyncing(true)
+    const handleSyncEnd = () => setIsSyncing(false)
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('meatify-sync-start', handleSyncStart)
+    window.addEventListener('meatify-sync-end', handleSyncEnd)
 
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
-      window.fetch = originalFetch
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('meatify-sync-start', handleSyncStart)
+      window.removeEventListener('meatify-sync-end', handleSyncEnd)
+      unsubscribe()
     }
   }, [])
 

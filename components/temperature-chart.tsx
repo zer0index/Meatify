@@ -14,27 +14,35 @@ import {
   Filler,
 } from "chart.js"
 import { convertTemp } from "@/lib/utils"
+import { mergeHistoryForChart, getChartData } from "@/lib/historyUtils"
+import type { TemperatureReading } from "@/lib/types"
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
 interface TemperatureChartProps {
-  data: number[]
+  data: number[] // Live sensor data from API (ephemeral)
+  sessionHistory?: TemperatureReading[] // Persistent session history
   isCelsius: boolean
   targetTemp: number
   compact?: boolean
 }
 
-export function TemperatureChart({ data, isCelsius, targetTemp, compact = false }: TemperatureChartProps) {
+export function TemperatureChart({ 
+  data, 
+  sessionHistory = [], 
+  isCelsius, 
+  targetTemp, 
+  compact = false 
+}: TemperatureChartProps) {
   const chartRef = useRef<ChartJS<"line">>(null)
 
-  // Convert data if needed
-  const displayData = isCelsius ? data : data.map((temp) => convertTemp(temp, false))
+  // Merge live sensor data with persistent session history
+  const mergedHistory = mergeHistoryForChart(data, sessionHistory)
+  const { temperatures, labels } = getChartData(mergedHistory)
 
-  // Create labels for the last 15 minutes (assuming data points are 1 minute apart)
-  const labels = Array.from({ length: data.length }, (_, i) => {
-    const minutesAgo = data.length - 1 - i
-    return minutesAgo === 0 ? "now" : `-${minutesAgo}m`
-  })
+  // Convert temperature data if needed
+  const displayData = isCelsius ? temperatures : temperatures.map((temp) => convertTemp(temp, false))
+  const displayTargetTemp = isCelsius ? targetTemp : convertTemp(targetTemp, false)
 
   const chartData = {
     labels,
@@ -49,7 +57,7 @@ export function TemperatureChart({ data, isCelsius, targetTemp, compact = false 
       },
       {
         label: "Target",
-        data: Array(data.length).fill(targetTemp),
+        data: Array(displayData.length).fill(displayTargetTemp),
         borderColor: "rgba(239, 68, 68, 0.7)",
         borderWidth: 2,
         borderDash: [5, 5],
