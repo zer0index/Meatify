@@ -1,15 +1,74 @@
 node_modules
 npm-debug.log
 yarn-error.log
+yarn-debug.log*
+.npmrc
+.yarn
+.pnp.*
+
+# Build outputs
 dist
 .next
-.git
-.gitignore
-Dockerfile
-.dockerignore
-*.md
+out
+
+# Environment files
+.env*
+!.env.example
+
+# Logs
 *.log
-.env
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+lib-cov
+*.lcov
+
+# IDE files
 .vscode
 .idea
-coverage
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Docker files
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+__tests__
+*.test.*
+*.spec.*
+jest.config.*
+cypress
+.nyc_output
+
+# Temporary folders
+tmp
+temp
+
+# Data directories (should be mounted as volumes)
+data/sessions
+data/backups

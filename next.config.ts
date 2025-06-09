@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // deine bestehenden Optionen (z. B. output, images, etc.)
+  // Enable standalone output for better Docker performance
+  output: 'standalone',
   
   eslint: {
     ignoreDuringBuilds: true,
