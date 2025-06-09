@@ -26,7 +26,8 @@ const MAX_TEMPERATURE_HISTORY = 100
 
 // File-based storage configuration
 const isServer = typeof window === 'undefined'
-const DATA_DIR = '/app/data'
+// Use container path in production, relative path in development
+const DATA_DIR = process.env.NODE_ENV === 'production' ? '/app/data' : './data'
 const SESSIONS_DIR = `${DATA_DIR}/sessions`
 const CURRENT_SESSION_FILE = `${SESSIONS_DIR}/current.json`
 const LOCK_FILE = `${SESSIONS_DIR}/.lock`
@@ -329,10 +330,12 @@ export async function loadSessionFromFile(): Promise<GrillSession | null> {
     if (sessionAge > maxAge) {
       return null
     }
-    
-    return session
-  } catch (error) {
-    console.warn('Failed to load session from file:', error)
+      return session
+  } catch (error: any) {
+    // Don't log warnings for missing files - this is expected for fresh installations
+    if (error?.code !== 'ENOENT') {
+      console.warn('Failed to load session from file:', error)
+    }
     return null
   }
 }
