@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   meatify:
-    build:
-      context: https://github.com/zer0index/Meatify.git
-      dockerfile: Dockerfile
+    image: meatify-app:latest
     ports:
       - "3000:3000"
     volumes:
