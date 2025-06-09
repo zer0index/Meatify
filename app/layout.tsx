@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { initializeStorage, startAutoSync } from "@/lib/dataStore";
+import BackgroundVideo from "@/components/background-video";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,8 +33,9 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased relative`}
       >
+        <BackgroundVideo enableToggle={process.env.NODE_ENV === 'development'} />
         {children}
       </body>
     </html>

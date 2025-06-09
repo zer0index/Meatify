@@ -118,6 +118,36 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Ensure content stays above video background */
+    position: relative;
+    z-index: 1;
+  }
+}
+
+/* Video background enhancements */
+@layer utilities {
+  .video-background-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -10;
+    overflow: hidden;
+  }
+  
+  .video-background {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.15;
+    filter: blur(1px) brightness(0.7) contrast(1.1);
+  }
+  
+  /* Ensure cards and components have slight transparency to show background */
+  .card-with-bg {
+    background-color: var(--card) / 0.95;
+    backdrop-filter: blur(2px);
   }
 }
 

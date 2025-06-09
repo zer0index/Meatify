@@ -72,16 +72,40 @@ export async function DELETE(): Promise<NextResponse> {
   try {
     // Delete session from file storage
     const fs = await import('fs/promises')
+    const path = require('path')
     
+    // Delete current session file
     try {
-      await fs.unlink(require('path').join(process.cwd(), './data/sessions/current.json'))
+      await fs.unlink(path.join(process.cwd(), './data/sessions/current.json'))
     } catch (error) {
       // File might not exist, which is fine
     }
 
+    // Delete all backup files
+    try {
+      const backupDir = path.join(process.cwd(), './data/backups')
+      const backupFiles = await fs.readdir(backupDir)
+      
+      // Delete each backup file
+      for (const file of backupFiles) {
+        if (file.endsWith('.json') && file.startsWith('session_')) {
+          try {
+            await fs.unlink(path.join(backupDir, file))
+          } catch (error) {
+            console.warn(`Failed to delete backup file ${file}:`, error)
+          }
+        }
+      }
+      
+      console.log(`Deleted ${backupFiles.length} backup files`)
+    } catch (error) {
+      console.warn('Failed to delete backup files:', error)
+      // Don't fail the entire operation if backup deletion fails
+    }
+
     return NextResponse.json({ 
       cleared: true,
-      message: 'Session cleared successfully',
+      message: 'Session and backup files cleared successfully',
       lastSync: new Date().toISOString()
     })
   } catch (error) {

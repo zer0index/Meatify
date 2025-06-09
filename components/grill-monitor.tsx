@@ -223,11 +223,10 @@ export default function GrillMonitor() {
     })
       return unsubscribe
   }, [])
-
   // Don't render until mounted to prevent hydration mismatches
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white">
+      <div className="min-h-screen bg-gray-900/80 text-white">
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center">
@@ -257,9 +256,8 @@ export default function GrillMonitor() {
       />
     )
   }
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black">      {/* Session Timer Header */}
+    <div className="min-h-screen bg-gradient-to-b from-gray-900/80 to-black/80">      {/* Session Timer Header */}
       <SessionHeader 
         sessionStartTime={sessionStartTime} 
         isSessionActive={isSessionActive} 

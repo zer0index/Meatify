@@ -280,12 +280,35 @@ export async function clearSession(): Promise<void> {
         localStorage.removeItem(SESSION_STORAGE_KEY)
       }
     }
-    
-    // Server-side: clear from file directly
+      // Server-side: clear from file directly
     if (isServer) {
       try {
         const fs = await import('fs/promises')
+        
+        // Delete current session file
         await fs.unlink(CURRENT_SESSION_FILE)
+        
+        // Delete all backup files
+        try {
+          const backupDir = `${DATA_DIR}/backups`
+          const backupFiles = await fs.readdir(backupDir)
+          
+          // Delete each backup file
+          for (const file of backupFiles) {
+            if (file.endsWith('.json') && file.startsWith('session_')) {
+              try {
+                await fs.unlink(`${backupDir}/${file}`)
+              } catch (error) {
+                console.warn(`Failed to delete backup file ${file}:`, error)
+              }
+            }
+          }
+          
+          console.log(`Deleted ${backupFiles.length} backup files`)
+        } catch (error) {
+          console.warn('Failed to delete backup files:', error)
+          // Don't fail the entire operation if backup deletion fails
+        }
       } catch (error) {
         // File might not exist
       }
