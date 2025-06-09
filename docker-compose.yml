@@ -3,7 +3,7 @@ version: '3.8'
 services:
   meatify:
     build:
-      context: .
+      context: https://github.com/zer0index/Meatify.git
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
